@@ -4,7 +4,8 @@
 // @version      1.0-20210506
 // @description  Scrub site of ugliness and ease the process of downloading from multiple sites!
 // @author       PrimePlaya24
-// @match        https://dropapk.to/*
+// @include      /^(?:https?:\/\/)?(?:www\.)?dropapk\.(to|com)\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?drop\.download\//
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
