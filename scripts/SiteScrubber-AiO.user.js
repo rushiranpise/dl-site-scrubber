@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber - All-in-One
 // @namespace    SiteScrubber
-// @version      1.1.0
+// @version      1.1.1
 // @description  Scrub site of ugliness and ease the process of downloading from multiple sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -1131,20 +1131,33 @@ if (
       ["div.col-sm-12.content-section.text-center.mb-5"],
       /upgrade your account to a Premium account/gi
     );
+    
+    ifElementExists("#downloadbtn", () => {
+        document
+          .querySelector("#downloadbtn")
+          .classList.replace("btn-sm", "btn-lg");
+      });
 
-    // Automation
-    document.querySelector("input[name='method_free']")?.click();
-    googleRecaptchaListener(document.forms.F1, 35);
-    waitUntilElementSelector_async("#downLoadLinkButton").then((link) => {
-      // Remove nasty ad redirect
-      link.onclick = undefined;
-      if (link?.dataset.target) {
-        log("DDL Link was found on this page.");
-        // Open DDL for download
-        window.open(link?.dataset.target, "_self");
-        log("Opening DDL link for file.");
-      }
-    });
+      // Automation
+      document.querySelector("input[name='method_free']")?.click();
+      googleRecaptchaListener(document.forms.F1, 35);
+      waitUntilElementSelector_async("#downLoadLinkButton").then((link) => {
+        log_debug(link.getAttribute("onclick"));
+        // Remove nasty ad redirect
+        btn.removeAttribute("onclick");
+        if (link?.dataset.target) {
+          log("DDL Link was found on this page.");
+          // Open DDL for download
+          backupWindowOpen(link?.dataset.target, "_self");
+          log("Opening DDL link for file.");
+        }
+      });
+      waitUntilElementSelector_async("#downLoadLinkButton[onclick]").then(
+        (btn) => {
+          console.log(btn.getAttribute("onclick"));
+          btn.removeAttribute("onclick");
+        }
+      );
   };
 } else if (window.location.href.includes("https://uploadev.org/")) {
   clean_site = () => {
