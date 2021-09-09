@@ -59,7 +59,7 @@ const SiteScrubber = function (window) {
 
   // this.GM_addStyle(this.siteRules.customStyle);
 
-  const siteRules = {
+  this.siteRules = {
     dropapk: {
       host: ["drop.download", "dropapk.to"],
       customStyle: `html{background:#121212!important}body{background:#121212!important;color:#dfdfdf!important}#container{background:#121212!important}.download_box{background-color:#323232!important}.bg-white{background:#121212!important}`,
@@ -1334,7 +1334,7 @@ const SiteScrubber = function (window) {
     },
   };
 
-  for (const site in siteRules) {
+  for (const site in this.siteRules) {
     if (
       siteRules[site].host.some((urlMatch) => {
         if (urlMatch instanceof RegExp) {
@@ -1344,12 +1344,12 @@ const SiteScrubber = function (window) {
         }
       })
     ) {
-      this.siteRules = siteRules[site];
+      this.currSiteRules = siteRules[site];
       this.log_debug(`Using site rules for site: ${site}`);
       if (
         !this.checkIfDownloadPage(
-          this.siteRules?.downloadPageCheckBySelector,
-          this.siteRules?.downloadPageCheckByRegex
+          this.currSiteRules?.downloadPageCheckBySelector,
+          this.currSiteRules?.downloadPageCheckByRegex
         )
       ) {
         this.log("Did not match as a download page... Stopping.");
@@ -1357,7 +1357,7 @@ const SiteScrubber = function (window) {
       } else {
         this.log("Assuming this is a download page.");
       }
-      this.GM_addStyle(this.siteRules?.customStyle);
+      this.GM_addStyle(this.currSiteRules?.customStyle);
       if (
         document.readyState === "complete" ||
         document.readyState === "interactive"
