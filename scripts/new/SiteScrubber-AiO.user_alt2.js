@@ -32,7 +32,8 @@
 // @include      /^(?:https?:\/\/)?(?:www\.)?dlsharefile\.(com|org)\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?file4\.net\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?dailyuploads\.net\//
-// @include      /^(?:https?:\/\/)?(?:www\.)?indi-share\.net\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?indi-share\.(com|net)\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?techmyntra\.(com|net)\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?depositfiles\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?clicknupload\.cc\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?veryfiles\.com\//
@@ -40,7 +41,6 @@
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
-
 
 class SiteScrubber {
   constructor(rules) {
@@ -72,7 +72,7 @@ class SiteScrubber {
 
     this.currSiteRules = rules;
     // this.siteRules = siteRules;
-    // this.GM_addStyle(this.siteRules.customStyle);
+    // this.addCustomCSSStyle(this.siteRules.customStyle);
   }
   setup() {
     this.logDebug("Initializing SiteScrubber...");
@@ -120,7 +120,7 @@ class SiteScrubber {
   ifElementExists(query, fn = () => undefined) {
     return this.$(query) && fn(query);
   }
-  GM_addStyle(cssStr) {
+  addCustomCSSStyle(cssStr) {
     if (!cssStr) {
       return;
     }
@@ -226,6 +226,13 @@ class SiteScrubber {
       }
     });
   }
+  addJQuery() {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js";
+    const targ =
+      this.document.head || this.document.body || this.document.documentElement;
+    targ.appendChild(s);
+  }
   async addGoogleRecaptchaListener(formElement, timer = 0) {
     const _this = this;
     if (!formElement) {
@@ -271,19 +278,24 @@ class SiteScrubber {
       }, INTERVAL);
     });
   }
-  createGoogleRecaptcha(elementToUnder, site_key) {
-    if (typeof elementToUnder == "string" || elementToUnder instanceof String) {
-      elementToUnder = this.$(elementToUnder);
+  createGoogleRecaptcha(elementTarget, site_key, position = "beforeend") {
+    if (typeof elementTarget == "string" || elementTarget instanceof String) {
+      elementTarget = this.$(elementTarget);
     }
-    if (!(elementToUnder instanceof HTMLElement) || null === elementToUnder) {
+    if (!(elementTarget instanceof HTMLElement) || null === elementTarget) {
       this.logDebug("createGoogleRecaptcha - failed to find element");
       return;
     }
+    this.logDebug("createGoogleRecaptcha() - element to add under");
+    this.logDebugNaked(elementTarget);
     const script = this.document.createElement("script");
     script.src = "https://www.google.com/recaptcha/api.js";
     this.document.body.appendChild(script);
     this.waitUntilGlobalVariable("grecaptcha").then(() => {
-      elementToUnder.innerHTML = `<div id="ss-recaptcha" data-sitekey="${site_key}" data-starttime="${+new Date()}"></div>`;
+      elementTarget.insertAdjacentHTML(
+        position,
+        `<div id="ss-recaptcha" data-sitekey="${site_key}" data-starttime="${+new Date()}"></div>`
+      );
       grecaptcha.render("ss-recaptcha", {
         sitekey: site_key,
       });
@@ -455,7 +467,7 @@ class SiteScrubber {
     }
     this.logDebug("Adding SiteScrubber hover info banner");
 
-    this.GM_addStyle(
+    this.addCustomCSSStyle(
       `.ss-alert-warning{color:#8a6d3b;background-color:#fcf8e3;border-color:#faebcc}.ss-alert{width:100%;padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:4px}.ss-col-md-12{width:100%}.ss-mt-5{margin-top:5em}.ss-text-center{text-align:center}`
     );
     const newNode = `<div class="ss-alert ss-alert-warning ss-mt-5 ss-text-center">TO PREVENT MALICIOUS REDIRECT, <b>HOVER</b> OVER THE BUTTON FOR 2 SECONDS TO SUBMIT CLEANLY</div>`;
@@ -470,7 +482,7 @@ class SiteScrubber {
       return;
     }
     const whitelist = [
-      "ss__",
+      "siteScrubber",
       "$",
       "jQuery",
       "___grecaptcha_cfg",
@@ -598,17 +610,17 @@ class SiteScrubber {
       timer = +element.innerText;
     }
     this.logDebug("createCountdown - found element, creating timer");
-    ss__.countdownSecondsLeft = timer;
-    ss__.countdownInterval = ss__.origSetInterval(
-      ss__.tick.bind(this, element),
+    siteScrubber.countdownSecondsLeft = timer;
+    siteScrubber.countdownInterval = siteScrubber.origSetInterval(
+      siteScrubber.tick.bind(this, element),
       1000
     );
   }
   tick(element) {
-    const remaining = --ss__.countdownSecondsLeft;
+    const remaining = --siteScrubber.countdownSecondsLeft;
     if (remaining < 0) {
-      clearInterval(ss__.countdownInterval);
-      ss__.countdownInterval = null;
+      clearInterval(siteScrubber.countdownInterval);
+      siteScrubber.countdownInterval = null;
     } else {
       element.innerText = remaining;
       this.logDebug(`Tick: ${remaining}`);
@@ -629,7 +641,7 @@ class SiteScrubber {
       this.log("Assuming this is a download page.");
     }
 
-    this.GM_addStyle(this.currSiteRules?.customStyle);
+    this.addCustomCSSStyle(this.currSiteRules?.customStyle);
     this.log("Added custom CSS styling");
     if (this.currSiteRules?.createCountdown) {
       this.createCountdown(this.currSiteRules?.createCountdown);
@@ -829,7 +841,6 @@ const siteRules = {
     removeDisabledAttr: true,
     destroyWindowFunctions: [
       "__CF$cv$params",
-      "ethereum",
       "absda",
       // "go",
       "adsbygoogle",
@@ -980,7 +991,6 @@ const siteRules = {
     removeIFrames: true,
     removeDisabledAttr: true,
     destroyWindowFunctions: [
-      "ethereum",
       // "__rocketLoaderEventCtor",
       // "__rocketLoaderLoadProgressSimulator",
       "__cfQR",
@@ -1035,7 +1045,7 @@ const siteRules = {
         btn?.click();
       });
       this.waitUntilSelector("form[name='F1']").then((form) => {
-        this.GM_addStyle(
+        this.addCustomCSSStyle(
           `.ss-btn{background-color:#44c767;border-radius:28px;border:1px solid #18ab29;display:inline-block;cursor:pointer;color:#fff;font-family:Arial;font-size:17px;font-weight:700;padding:12px 64px;text-decoration:none;text-shadow:0 1px 0 #2f6627}.ss-btn:hover{background-color:#5cbf2a}.ss-btn:active{position:relative;top:1px}`
         );
         form.insertAdjacentHTML(
@@ -1059,7 +1069,7 @@ const siteRules = {
         btn.removeAttribute("onclick");
         const dl_link = btn.getAttribute("href");
         const parent = btn.parentElement;
-        this.GM_addStyle(
+        this.addCustomCSSStyle(
           `.ss-btn{background-color:#44c767;border-radius:28px;border:1px solid #18ab29;display:inline-block;cursor:pointer;color:#fff;font-family:Arial;font-size:17px;font-weight:700;padding:12px 64px;text-decoration:none;text-shadow:0 1px 0 #2f6627}.ss-btn:hover{background-color:#5cbf2a}.ss-btn:active{position:relative;top:1px}`
         );
         parent.innerHTML = `<a class="ss-btn" href="${dl_link}">Download</button>`;
@@ -1097,7 +1107,6 @@ const siteRules = {
     removeIFrames: true,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      "ethereum",
       "gtag",
       "dataLayer",
       "adsbygoogle",
@@ -1203,7 +1212,6 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      "ethereum",
       "setPagination",
       "_gaq",
       "WOW",
@@ -1268,7 +1276,6 @@ const siteRules = {
     removeIFrames: true,
     removeDisabledAttr: true,
     destroyWindowFunctions: [
-      "ethereum",
       "_gaq",
       "adsbygoogle",
       "_gat",
@@ -1360,7 +1367,6 @@ const siteRules = {
     destroyWindowFunctions: [
       "setPagination",
       "_gaq",
-      "ethereum",
       "timeout",
       "adsbygoogle",
       "__gcse",
@@ -1587,7 +1593,6 @@ const siteRules = {
       "setPagination",
       "lng",
       "_gaq",
-      "ethereum",
       "adtrue_tags",
       "pro_ad",
       "timeout",
@@ -1654,7 +1659,6 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      "ethereum",
       "_gaq",
       "setPagination",
       "cookiesAgree",
@@ -1777,7 +1781,6 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: true,
     destroyWindowFunctions: [
-      "ethereum",
       // '__rocketLoaderEventCtor',
       // '__rocketLoaderLoadProgressSimulator',
       "__cfQR",
@@ -1898,7 +1901,6 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      "ethereum",
       "__cfQR",
       "__core-js_shared__",
       "1bgbb027-3b87-ae67-26ar-hz150f600z16",
@@ -2008,7 +2010,7 @@ const siteRules = {
   },
   dlupload: {
     host: ["khabarbabal.online", "dlsharefile.com", "dlsharefile.org"],
-    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}.bg-secondary,.bg-white,.card,.icon,.label-group,.subpage-content{background:#121212!important}#show-submit-btn,.border.bg-secondary .bg-white.border-0,.col-lg-12.text-center,.row.justify-content-center>a[href],.separator,.text-lg-center.btn-wrapper,center,h5.mb-0{display:none!important}.d-none{display:block!important}.h1,.h2,.h3,.h4,.h5,.h6,h1,h2,h3,h4,h5,h6{color:#dfdfdf!important}.container-1{visibility:hidden!important}form#DownloadForm{display:flex;flex-direction:column;align-items:center}`,
+    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}.bg-secondary,.bg-white,.card,.icon,.label-group,.subpage-content{background:#121212!important}#show-submit-btn,.border.bg-secondary .bg-white.border-0,.col-lg-12.text-center,.row.justify-content-center>a[href],.separator,.text-lg-center.btn-wrapper,center,h5.mb-0{display:none!important}.d-none{display:block!important}.h1,.h2,.h3,.h4,.h5,.h6,h1,h2,h3,h4,h5,h6{color:#dfdfdf!important}.container-1{unset:hidden!important}form#DownloadForm{display:flex;flex-direction:column;align-items:center}`,
     downloadPageCheckBySelector: ["a.downloadb"],
     downloadPageCheckByRegex: [/free download/gi],
     remove: [
@@ -2032,93 +2034,116 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      'ethereum',
-      'gtag',
-      'dataLayer',
-      'adsbygoogle',
-      'google_tag_manager',
-      'google_js_reporting_queue',
-      'google_srt',
-      'google_logging_queue',
-      'google_ad_modifications',
-      'ggeac',
-      'google_measure_js_timing',
-      'google_reactive_ads_global_state',
-      '_gfp_a_',
-      'google_sa_queue',
-      'google_sl_win',
-      'google_process_slots',
-      'google_spfd',
-      'google_unique_id',
-      'google_sv_map',
-      'google_lpabyc',
-      'google_user_agent_client_hint',
-      'google_tag_data',
-      'gaGlobal',
-      'Goog_AdSense_getAdAdapterInstance',
-      'Goog_AdSense_OsdAdapter',
-      'google_sa_impl',
-      'google_persistent_state_async',
-      '__google_ad_urls',
-      'google_global_correlator',
-      '__google_ad_urls_id',
-      'googleToken',
-      'googleIMState',
-      '_gfp_p_',
-      'processGoogleToken',
-      'google_prev_clients',
-      'goog_pvsid',
-      'google_jobrunner',
-      'ampInaboxIframes',
-      'ampInaboxPendingMessages',
-      'goog_sdr_l',
-      'google_osd_loaded',
-      'google_onload_fired',
-      'Goog_Osd_UnloadAdBlock',
-      'Goog_Osd_UpdateElementToMeasure',
-      'google_osd_amcb',
-      '$insertQueue7cbd83f132f5$',
-      '1bgbb027-3b87-ae67-26ar-hz150f600z16',
-      'RedirectCookies',
-      'filename',
-      'extension',
-      'd',
-      'urlsArray',
-      'randomNumber',
-      'currentImageUrl',
-      'yxhpa',
-      'yxhpb',
-      'yxhpo',
-      'yllixNetworkLoader',
-      'Headroom',
-      // 'GotoLink',
-      'process_430610',
-      '_0x4ab4',
-      '_0x4f3e',
-      'sbslms',
-      'process_430474',
-      'closure_lm_259947',
-      'onYouTubeIframeAPIReady',
-      '$insert7cbd83f132f5$',
-      'closure_lm_94135',
-      '_0xa5ec',
-      '_0x4b20',
-      '_0x42f0b5',
-      'mm',
-      'rp',
-      'LieDetector',
-      'AaDetector',
-      'placementKey',
-      '_0xa6ab',
-      '_0x41de',
-      'googletag',
-      'GoogleGcLKhOms',
-      'google_image_requests'
+      // "ethereum",
+      // "gtag",
+      // "dataLayer",
+      // "adsbygoogle",
+      // "google_tag_manager",
+      // "google_js_reporting_queue",
+      // "google_srt",
+      // "google_logging_queue",
+      // "google_ad_modifications",
+      // "ggeac",
+      // "google_measure_js_timing",
+      // "google_reactive_ads_global_state",
+      // "_gfp_a_",
+      // "google_sa_queue",
+      // "google_sl_win",
+      // "google_process_slots",
+      // "google_spfd",
+      // "google_unique_id",
+      // "google_sv_map",
+      // "google_lpabyc",
+      // "google_user_agent_client_hint",
+      // "google_tag_data",
+      // "gaGlobal",
+      // "Goog_AdSense_getAdAdapterInstance",
+      // "Goog_AdSense_OsdAdapter",
+      // "google_sa_impl",
+      // "google_persistent_state_async",
+      // "__google_ad_urls",
+      // "google_global_correlator",
+      // "__google_ad_urls_id",
+      // "googleToken",
+      // "googleIMState",
+      // "_gfp_p_",
+      // "processGoogleToken",
+      // "google_prev_clients",
+      // "goog_pvsid",
+      // "google_jobrunner",
+      // "ampInaboxIframes",
+      // "ampInaboxPendingMessages",
+      // "goog_sdr_l",
+      // "google_osd_loaded",
+      // "google_onload_fired",
+      // "Goog_Osd_UnloadAdBlock",
+      // "Goog_Osd_UpdateElementToMeasure",
+      // "google_osd_amcb",
+      // "$insertQueue7cbd83f132f5$",
+      // "1bgbb027-3b87-ae67-26ar-hz150f600z16",
+      // "RedirectCookies",
+      // "filename",
+      // "extension",
+      // "d",
+      // "urlsArray",
+      // "randomNumber",
+      // "currentImageUrl",
+      // "yxhpa",
+      // "yxhpb",
+      // "yxhpo",
+      // "yllixNetworkLoader",
+      // "Headroom",
+      // "process_430610",
+      // "_0x4ab4",
+      // "_0x4f3e",
+      // "sbslms",
+      // "process_430474",
+      // "closure_lm_259947",
+      // "onYouTubeIframeAPIReady",
+      // "$insert7cbd83f132f5$",
+      // "closure_lm_94135",
+      // "_0xa5ec",
+      // "_0x4b20",
+      // "_0x42f0b5",
+      // "mm",
+      // "rp",
+      // "LieDetector",
+      // "AaDetector",
+      // "placementKey",
+      // "_0xa6ab",
+      // "_0x41de",
+      // "googletag",
+      // "GoogleGcLKhOms",
+      // "google_image_requests",
+      // "DownloadLink",
+      // "GotoLink",
+      // "_0x28f6",
+      // "_0x3693",
+      // "_0x196a1559e34586fdb",
+      // "ImpressionCookies",
+      // "d1",
+      // "urlsArray1",
+      // "randomNumber1",
+      // "currentImageUrl1",
     ],
     finalDownloadElementSelector: [],
     addHoverAbility: undefined,
     addInfoBanner: undefined,
     customScript() {
+      this.$("body").insertAdjacentHTML(
+        "afterbegin",
+        `<form id="DownloadForm" action="/Download/FilePage5" method="post">
+      <input type="hidden" name="FileId" value="NmU1ZDRhOTYt">
+      <input type="hidden" name="ContinentName" value="">
+      <input type="hidden" name="CountryName" value="">
+      <input type="hidden" name="CityName" value="">
+      <button class="btn btn-lg btn-facebook  d-none" type="submit" id="Submit">Start Download</button>`
+      );
+      this.createGoogleRecaptcha(
+        "#DownloadForm",
+        "6LdyluwUAAAAAI5AMDQTg4_9LFoNbrJub0IsdU3p",
+        "afterbegin"
+      );
       return;
       this.waitUntilSelector("a#downloadb").then((btn) => {
         btn?.click();
@@ -2169,9 +2194,126 @@ const siteRules = {
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "Dropzone",
+      "k",
+      "_denv1fluxpv",
+      "q13fpwg2dn",
+      "zfgformats",
+      "setImmediate",
+      "clearImmediate",
+      "_irsgkipt",
+      "_zmlhugd",
+      "s",
+      "h6RR",
+      "r1qq",
+      "K6RR",
+      "r6RR",
+      "p6RR",
+      "Cookies",
+      "moment",
+      "daterangepicker",
+      "Morris",
+      "eve",
+      "Raphael",
+      "AmCharts",
+      "sample_data",
+      "Datatable",
+      "JSZip",
+      // "_",
+      "pdfMake",
+      "ZeroClipboard_TableTools",
+      "App",
+      "Dashboard",
+      "TableDatatablesManaged",
+      "Layout",
+      "Demo",
+      "QuickSidebar",
+      "closure_lm_166842",
+      "LAST_CORRECT_EVENT_TIME",
+      "_3512947627",
+      "_766768431",
+      "fa",
+      "_1995723363",
+      "post_sticky_handler",
+      "post_noads_handler",
+      "post_skin_handler",
+      "post_expandable_handler",
+      "post_pop_handler",
+      "post_interstitial_handler",
+      "post_native_handler",
+      "native_resize_handler",
+      "ItemDataScript_parameter",
+      "ItemDataScript_parameter_new",
+      "ItemDataScript_parameter_seperate",
+      "aduid",
+      "pid",
+      "width",
+      "height",
+      "displaytype",
+      "page_meta_data",
+      "page_title",
+      "page_referrer",
+      "meta_description",
+      "meta_keywords",
+      "search_keywords",
+      "currently_rendered",
+      "currently_rendered_flag",
+      "currently_rendered_adunit",
+      "ret",
+      "iframe_src",
+      "q9tt",
+      "J911",
+      "n3hh",
+      "P9tt",
+      "G3hh",
+      "m3hh",
+      "U3hh",
+      "i911",
+      "N911",
+      "Q911",
+      "c2ss",
+      "onClickTrigger",
+      "kkp4a5x5tv",
+      "zfgloadedpopup",
+      "urlorigin",
+      "iinf",
+      "zfgloadednative",
+      "_retranberw",
+      "webpushlogs",
+      "initIPP",
+      "regeneratorRuntime",
+      "__core-js_shared__",
+      "_retranber",
+      "wm",
+      "oaid",
+      "ppuWasShownFor4187056",
+      "_0x2efe",
+      "_0x2200",
+      "_nps",
+      "nsto",
+      "timeout",
+      "interval",
+      "threshold",
+      "secondsleft",
+      "sleepFor",
+      "startChecking",
+      "startschedule",
+      "resetTimer",
+      "_nne4hoafqlc",
+      "zxwphqjzamr",
+      "e",
+      "x",
+    ],
     finalDownloadElementSelector: [[".div2 a[href^='down']"]],
-    addHoverAbility: undefined,
-    addInfoBanner: undefined,
+    addHoverAbility: [
+      ["form[name='myform'] input[type='submit']", true],
+      [".div2 a[href^='down']", false],
+    ],
+    addInfoBanner: [
+      ["form[name='myform']", "beforeend"],
+      [".div2 a[href^='down']", "afterend"],
+    ],
     customScript() {
       this.waitUntilGlobalVariable("grecaptcha").then(() => {
         const form = this.$("form[name='myform']");
@@ -2192,7 +2334,7 @@ const siteRules = {
   },
   dailyuploads: {
     host: ["dailyuploads.net"],
-    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}form[name=F1]{visibility:hidden}form[name=F1] table{visibility:visible}div.banner div.inner{display:flex;flex-direction:column;align-items:center}a[href*='.dailyuploads.net'],#downloadBtnClickOrignal{background-color:#008CBA;border:none;color:#fff;padding:15px 32px;text-align:center;text-decoration:none;display:inline-block;font-size:16px}a[href*='.dailyuploads.net']:hover,#downloadBtnClickOrignal:hover{background-color:#0A6BD1}a[href*='.dailyuploads.net']:before{content:"Download"}`,
+    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}form[name=F1]{visibility:hidden}form[name=F1] table{visibility:visible}div.banner div.inner{display:flex;flex-direction:column;align-items:center}a[href*='.dailyuploads.net']:before{content:"Download"}a[href*='.dailyuploads.net'],#downloadBtnClickOrignal,.ss-btn{background-color:#44c767;border-radius:28px;border:1px solid #18ab29;display:inline-block;cursor:pointer;color:#fff;font-family:Arial;font-size:17px;font-weight:700;padding:12px 64px;text-decoration:none;text-shadow:0 1px 0 #2f6627}a[href*='.dailyuploads.net']:hover,#downloadBtnClickOrignal:hover,.ss-btn:hover{background-color:#5cbf2a}a[href*='.dailyuploads.net'],#downloadBtnClickOrignal,.ss-btn:active{position:relative;top:1px}`,
     downloadPageCheckBySelector: [],
     downloadPageCheckByRegex: [
       /Download File/gi,
@@ -2210,20 +2352,291 @@ const siteRules = {
       "br",
       "a[title='online visitors']",
       "img[src*='redbutton.png']",
+      "#addLinkBtn",
+      "input[onclick]",
+      "a:not([href*='dailyuploads'])",
     ],
     removeByRegex: [],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
-    restoreWindowFunctions: ["open"],
-    finalDownloadElementSelector: [["a[href*='.dailyuploads.net']"]],
-    addHoverAbility: [
-      ["a[href*='.dailyuploads.net']"],
-      ["#downloadBtnClickOrignal"],
+    destroyWindowFunctions: [
+      "show_fname_chars",
+      "upload_type",
+      "form_action",
+      "x",
+      "y",
+      "openStatusWindow",
+      "StartUpload",
+      "StartUploadBox",
+      "checkExt",
+      "checkSize",
+      "getFileSize",
+      "fixLength",
+      "MultiSelector",
+      "getFormAction",
+      "setFormAction",
+      "InitUploadSelector",
+      "findPos",
+      "changeUploadType",
+      "jah",
+      "submitCommentsForm",
+      "scaleImg",
+      "OpenWin",
+      "player_start",
+      "convertSize",
+      "openlink",
+      "checkForm",
+      "tab_cookie",
+      "share_facebook",
+      "share_twitter",
+      "share_gplus",
+      "share_vk",
+      "tabberOptions",
+      "setCookie",
+      "getCookie",
+      "deleteCookie",
+      "tabberObj",
+      "tabberAutomatic",
+      "tabberAutomaticOnLoad",
+      "_Hasync",
+      "_gaq",
+      "curr",
+      "old",
+      "closure_lm_382233",
+      "_gat",
+      "gaGlobal",
+      "gw2znwdsw05",
+      "zfgformats",
+      "onClickTrigger",
+      "zfgloadedpopup",
+      "chfh",
+      "chfh2",
+      "_HST_cntval",
+      "Histats",
+      "_HistatsCounterGraphics_0_setValues",
+      "a",
+      "cv",
+      "Tynt",
+      "_dtspv",
+      "sdk",
+      "installOnFly",
+      "_33Across",
+      "__uspapi",
+      "zfgloadedpush",
+      "zfgloadedpushopt",
+      "zfgloadedpushcode",
+      "__connect",
+      "lotame_3825",
+      "char",
+      "lotameIsCompatible",
+      "lt3825_ba",
+      "lt3825_b",
+      "lt3825_c",
+      "lt3825_ca",
+      "lt3825_d",
+      "lt3825_e",
+      "lt3825_da",
+      "lt3825_ea",
+      "lt3825_fa",
+      "lt3825_",
+      "lt3825_4",
+      "lt3825_aa",
+      "lt3825_a",
+      "lt3825_f",
+      "lt3825_g",
+      "lt3825_h",
+      "lt3825_i",
+      "lt3825_j",
+      "lt3825_l",
+      "lt3825_ga",
+      "lt3825_k",
+      "lt3825_m",
+      "lt3825_n",
+      "lt3825_o",
+      "lt3825_p",
+      "lt3825_q",
+      "lt3825_r",
+      "lt3825_s",
+      "lt3825_t",
+      "lt3825_u",
+      "lt3825_ha",
+      "lt3825_ia",
+      "lt3825_w",
+      "lt3825_ja",
+      "lt3825_x",
+      "lt3825_y",
+      "lt3825_v",
+      "lt3825_z",
+      "lt3825_A",
+      "lt3825_B",
+      "lt3825_C",
+      "lt3825_D",
+      "lt3825_E",
+      "lt3825_F",
+      "lt3825_G",
+      "lt3825_H",
+      "lt3825_I",
+      "lt3825_J",
+      "lt3825_L",
+      "lt3825_M",
+      "lt3825_N",
+      "lt3825_K",
+      "lt3825_ka",
+      "lt3825_la",
+      "lt3825_P",
+      "lt3825_O",
+      "lt3825_Q",
+      "lt3825_R",
+      "lt3825_S",
+      "lt3825_T",
+      "lt3825_ma",
+      "lt3825_na",
+      "lt3825_oa",
+      "lt3825_pa",
+      "lt3825_U",
+      "lt3825_V",
+      "lt3825_W",
+      "lt3825_qa",
+      "lt3825_sa",
+      "lt3825_ra",
+      "lt3825_X",
+      "lt3825_ta",
+      "lt3825_ua",
+      "lt3825_Y",
+      "lt3825_Z",
+      "lt3825__",
+      "lt3825_va",
+      "lt3825_wa",
+      "lt3825_xa",
+      "lt3825_ya",
+      "lt3825_0",
+      "lt3825_za",
+      "lt3825_Aa",
+      "lt3825_Ba",
+      "lt3825_1",
+      "lt3825_Da",
+      "lt3825_Ca",
+      "lt3825_Ea",
+      "lt3825_Fa",
+      "lt3825_Ga",
+      "lt3825_Ha",
+      "lt3825_2",
+      "lt3825_3",
+      "lt3825_Ia",
+      "lt3825_Ja",
+      "lt3825_Ka",
+      "lt3825_La",
+      "lt3825_Ma",
+      "lt3825_Na",
+      "lt3825_Oa",
+      "lt3825_Pa",
+      "lt3825_Qa",
+      "lt3825_5",
+      "lt3825_6",
+      "lt3825_Ta",
+      "lt3825_Ua",
+      "lt3825_Sa",
+      "lt3825_Ra",
+      "lt3825_Wa",
+      "lt3825_Va",
+      "lt3825_Ya",
+      "lt3825_Xa",
+      "lt3825_7",
+      "lt3825_Za",
+      "lt3825__a",
+      "lt3825_0a",
+      "lt3825_1a",
+      "lt3825_2a",
+      "lt3825_4a",
+      "lt3825_7a",
+      "lt3825_6a",
+      "lt3825_3a",
+      "lt3825_9a",
+      "lt3825_5a",
+      "lt3825_8a",
+      "lt3825_ab",
+      "lt3825_$a",
+      "lt3825_bb",
+      "lt3825_8",
+      "lt3825_cb",
+      "lt3825_db",
+      "lt3825_eb",
+      "lt3825_fb",
+      "lt3825_gb",
+      "lt3825_hb",
+      "lt3825_ib",
+      "lt3825_kb",
+      "lt3825_$",
+      "lt3825_jb",
+      "lt3825_lb",
+      "lt3825_9",
+      "ppuWasShownFor3374427",
+      "__underground",
+      "vglnk",
+      "s",
+      "__v5k",
+      "vl_cB",
+      "vl_disable",
+      "vglnk_16312892814196",
+      "vglnk_16312892814207",
+      "k",
+      "_pqt8jsmehl",
+      "ec55eztpw5",
+      "setImmediate",
+      "clearImmediate",
+      "_wjwos",
+      "_jswggtko",
+      "_wgd8as395z",
+      "_pkreuo",
+      "_qnyld",
+      "_mgIntExchangeNews",
+      "AdskeeperInfC796805",
+      "AdskeeperCContextBlock796805",
+      "AdskeeperCMainBlock796805",
+      "AdskeeperCInternalExchangeBlock796805",
+      "AdskeeperCColorBlock796805",
+      "AdskeeperCRejectBlock796805",
+      "AdskeeperCInternalExchangeLoggerBlock796805",
+      "AdskeeperCObserverBlock796805",
+      "AdskeeperCSendDimensionsBlock796805",
+      "AdskeeperCAntifraudStatisticsBlock796805",
+      "AdskeeperCRtbBlock796805",
+      "AdskeeperCContentPreviewBlock796805",
+      "AdskeeperCGradientBlock796805",
+      "AdskeeperCResponsiveBlock796805",
+      "mg_loaded_526408_796805",
+      "onClickExcludes",
+      "mgReject796805",
+      "mgLoadAds796805_12267",
+      "AdskeeperCReject796805",
+      "AdskeeperLoadGoods796805_12267",
+      "_mgq",
+      "_mgqp",
+      "_mgqt",
+      "_mgqi",
+      "_mgCanonicalUri",
+      "_mgPageViewEndPoint526408",
+      "_mgPvid",
+      "_mgPageView526408",
+      "kkp4a5x5tv",
+      "vglnk_16312893705126",
+      "vglnk_16312893705127",
+      "i.js.loaded",
+      "i-noref.js.loaded",
+      "$insertQueuef2e96b1e1637$",
+      "1bgbb027-3b87-ae67-26ar-hz150f600z16",
+      "_mgwcapping",
+      "_mgPageImp526408",
+      "process_289289",
+      "process_607019",
+      "$insertf2e96b1e1637$",
     ],
+    finalDownloadElementSelector: [["a[href*='.dailyuploads.net']"]],
+    addHoverAbility: [["a[href*='.dailyuploads.net']"], ["#downloadBtnClick"]],
     addInfoBanner: [
       ["a[href*='.dailyuploads.net']", "afterend"],
-      ["#downloadBtnClickOrignal", "afterend"],
+      ["#downloadBtnClick", "afterend"],
     ],
     customScript() {
       this.waitUntilGlobalVariable("grecaptcha").then(() => {
@@ -2232,23 +2645,33 @@ const siteRules = {
         form.addEventListener(
           "submit",
           () => {
-            this.$("#downloadBtnClickOrignal").textContent = "Loading...";
+            this.$("#downloadBtnClick").textContent = "Loading...";
           },
           false
         );
-        this.$("#downloadBtnClickOrignal")?.addEventListener(
+        this.$("#downloadBtnClick")?.addEventListener(
           "click",
           function () {
-            this.textContent = "Loading...";
+            if (grecaptcha.getResponse()) {
+              this.textContent = "Loading...";
+            }
           },
           false
         );
         this.addGoogleRecaptchaListener(form).then(() => {
-          this.$("#downloadBtnClickOrignal").textContent = "Loading...";
+          this.$("#downloadBtnClick").textContent = "Loading...";
         });
       });
-      curr = this.$("form table").nextElementSibling;
-      old = null;
+      this.waitUntilSelector("#downloadBtnClick").then((btn) => {
+        btn.className = "ss-btn";
+      });
+      this.waitUntilSelector(
+        "body > div.banner > div > a[href*='dailyuploads']"
+      ).then((btn) => {
+        btn.className = "ss-btn";
+      });
+      let curr = this.$("form table").nextElementSibling;
+      let old = null;
       while (curr != null) {
         old = curr;
         curr = curr.nextElementSibling;
@@ -2273,20 +2696,90 @@ const siteRules = {
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: true,
+    destroyWindowFunctions: [
+      "s",
+      "O3AA",
+      "K7mm",
+      "L599",
+      "n7mm",
+      "Z3AA",
+      "l3AA",
+      "J3AA",
+      "z599",
+      "O599",
+      "t599",
+      "U2ii",
+      "setPagination",
+      "_gaq",
+      "timeout",
+      "ProgressBar",
+      "_gat",
+      "gaGlobal",
+      "q9tt",
+      "J911",
+      "n3hh",
+      "P9tt",
+      "G3hh",
+      "m3hh",
+      "U3hh",
+      "i911",
+      "N911",
+      "Q911",
+      "c2ss",
+      "a6_0x56ce",
+      "a6_0x285a",
+      "s2ss910ff",
+      "s2ss910",
+      "delComment",
+      "player_start",
+      "h",
+      "set",
+      "files",
+      "uplist",
+      "img",
+      "price",
+      "closure_lm_380100",
+      "a8_0x328e",
+      "a8_0x31d7",
+      "utm910",
+      "utsid-send",
+      "_0x4ab4",
+      "_0x4f3e",
+      "sbslms",
+      "_0xa5ec",
+      "_0x4b20",
+      "_0x42f0b5",
+      "mm",
+      "LieDetector",
+      "AaDetector",
+      "placementKey",
+      "rp",
+      "_0xa6ab",
+      "_0x41de",
+      "EmailDialog",
+    ],
     finalDownloadElementSelector: [
       [".down a", /This direct link will be available/gi],
     ],
     addHoverAbility: undefined,
     addInfoBanner: undefined,
+    createCountdown: ".seconds",
     customScript() {
       this.$(".row .col-md-4")?.classList?.replace("col-md-4", "col-md-12");
-      this.addGoogleRecaptchaListener(document.forms.F1, 17);
+      this.addGoogleRecaptchaListener(
+        document.forms.F1,
+        +this.$(".seconds").innerText || 17
+      );
     },
   },
   indishare: {
-    host: ["indi-share.net"],
+    host: ["indi-share.net", "indi-share.com", "techmyntra.net"],
     customStyle: `html{background:#121212!important}body,.panelRight,h2{background:#121212!important;color:#dfdfdf!important;padding:0!important}#direct_link a{background-color:#008CBA;border:none;color:#fff;padding:15px 32px;text-align:center;text-decoration:none;display:inline-block;font-size:16px}#direct_link a:hover{background-color:#0A6BD1}#direct_link a:before{content:"Download"}#content{display:flex;flex-direction:column;align-items:center}#container{height:inherit !important;}`,
-    downloadPageCheckBySelector: ["#downloadbtn", "#direct_link a"],
+    downloadPageCheckBySelector: [
+      "#downloadbtn",
+      "#direct_link a",
+      "a[rel*='noopener']",
+    ],
     downloadPageCheckByRegex: [/direct link will be available/gi],
     remove: [
       ".sidenav",
@@ -2294,18 +2787,129 @@ const siteRules = {
       ".footerNavigation",
       "footer",
       "#direct_link a img",
+      "#content > h3",
     ],
     removeByRegex: [],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: true,
+    destroyWindowFunctions: [
+      "_wpemojiSettings",
+      "ytp",
+      "onYouTubeIframeAPIReady",
+      "getYTPVideoID",
+      "uncamel",
+      "setUnit",
+      "setFilter",
+      "nAgt",
+      "isTouchSupported",
+      "getOS",
+      "nameOffset",
+      "verOffset",
+      "ix",
+      "start",
+      "end",
+      "twemoji",
+      "wp",
+      "jQuery360069712562284331821",
+      "scriptUrl",
+      "ttPolicy",
+      "YT",
+      "YTConfig",
+      "onYTReady",
+      "yt",
+      "ytDomDomGetNextId",
+      "ytEventsEventsListeners",
+      "ytEventsEventsCounter",
+      "ytPubsubPubsubInstance",
+      "ytPubsubPubsubTopicToKeys",
+      "ytPubsubPubsubIsSynchronous",
+      "ytPubsubPubsubSubscribedKeys",
+      "ytLoggingTransportGELQueue_",
+      "ytLoggingTransportTokensToCttTargetIds_",
+      "ytLoggingGelSequenceIdObj_",
+      "ytglobal",
+      "ytPubsub2Pubsub2Instance",
+      "ytPubsub2Pubsub2SubscribedKeys",
+      "ytPubsub2Pubsub2TopicToKeys",
+      "ytPubsub2Pubsub2IsAsync",
+      "ytPubsub2Pubsub2SkipSubKey",
+      "ytNetworklessLoggingInitializationOptions",
+      "jQuery19104180234621619725",
+      "setPagination",
+      "_gaq",
+      "s",
+      "h6RR",
+      "r1qq",
+      "K6RR",
+      "r6RR",
+      "p6RR",
+      "openNav",
+      "closeNav",
+      "_gat",
+      "gaGlobal",
+      "q9tt",
+      "J911",
+      "n3hh",
+      "P9tt",
+      "G3hh",
+      "m3hh",
+      "U3hh",
+      "i911",
+      "N911",
+      "Q911",
+      "c2ss",
+      "_0xa5ec",
+      "_0x4b20",
+      "_0x42f0b5",
+      "mm",
+      "LieDetector",
+      "AaDetector",
+      "placementKey",
+      "rp",
+      "adtrue_tags",
+      "player_start",
+      "countdown",
+      "generateCb",
+      "adtrue_time",
+      "adtrue_cb",
+      "adtrue_rtb",
+      "q",
+      "qs",
+      "js_code",
+      "k",
+      "_0xa6ab",
+      "_0x41de",
+      "share_facebook",
+      "share_twitter",
+      "share_gplus",
+      "share_vk",
+      "timeout",
+      "_tal7bp6gdd",
+      "zfgformats",
+      "setImmediate",
+      "clearImmediate",
+      "_ugeyycf",
+      "_qsjlbv",
+      "delComment",
+      "zfgproxyhttp",
+      "_yioboic29r",
+      "_ac96d98ingp",
+      "_mgPageViewEndPoint659169",
+      "_mgPvid",
+      "_mgPageView659169",
+      "_mgPageImp659169",
+    ],
     finalDownloadElementSelector: [["#direct_link a"]],
     addHoverAbility: [["#direct_link a"]],
     addInfoBanner: [["#direct_link", "afterend"]],
     customScript() {
-      const firstBtn = this.$("#downloadbtn");
-      firstBtn?.removeAttribute("disabled");
+      const firstBtn = this.$("a[rel*='noopener']");
       firstBtn?.click();
+      const secondBtn = this.$("#downloadbtn");
+      secondBtn?.click();
+      const finalBtn = this.$("#direct_link");
+      finalBtn.style.display = "";
     },
   },
   depositfiles: {
@@ -2335,10 +2939,143 @@ const siteRules = {
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "cur",
+      "fileQueued",
+      "fileQueueError",
+      "fileDialogComplete",
+      "uploadStart",
+      "uploadProgress",
+      "uploadSuccess",
+      "uploadError",
+      "uploadComplete",
+      "queueComplete",
+      "swfobject",
+      "activate_gold_key",
+      "bonuser_paid_request_console_add_show",
+      "bonuser_paid_request_console_remove_show",
+      "bonuser_paid_request_console_close",
+      "bonuser_paid_request_add",
+      "bonuser_paid_request_remove",
+      "read_get_param",
+      "login_toggle",
+      "get_display_text",
+      "show_error",
+      "load_recaptcha",
+      "DP_jQuery_1631293565349",
+      "SWFUpload",
+      "fabHash",
+      "ajload",
+      "isopra",
+      "isAbSpeedMode",
+      "recaptcha_public_key",
+      "recaptcha2PublicKey",
+      "toggle",
+      "cache_img",
+      "is_copy_to_clipboard_enabled",
+      "enable_copy_to_cliboard_links",
+      "copy_to_clipboard",
+      "get_elements_by_class",
+      "zero_pad",
+      "send_payoff",
+      "DFUtils",
+      "http_abs_path",
+      "http_static_path",
+      "ssl_static_path",
+      "http_ads_path",
+      "lang",
+      "user_country",
+      "RecaptchaOptions",
+      "_0x4ab4",
+      "_0x4f3e",
+      "sbslms",
+      "is_popup_showed",
+      "begin_popup_url",
+      "begin_script_url",
+      "show_begin_popup",
+      "show_url_start_time",
+      "show_url_first",
+      "show_url_r",
+      "show_url",
+      "img_code_form_submitted",
+      "submit_img_code",
+      "img_code_form_onsubmit",
+      "on_event",
+      "number_format",
+      "img_code_cached",
+      "img_code_icid",
+      "cache_img_code",
+      "refresh_img_code",
+      "open_img_code_page",
+      "addBookmark",
+      "is_download_started",
+      "download_started",
+      "show_iframe_console",
+      "iframe_console2_timer",
+      "show_iframe_console2",
+      "show_div_console",
+      "backgroud_gray",
+      "close_iframe_console",
+      "close_iframe_oauth_login",
+      "show_gold_offer",
+      "show_gold_offer_div",
+      "show_gold_offer_video",
+      "close_gold_offer_video",
+      "redirectAfterDownloadURL",
+      "redirectCookieName",
+      "setRedirectAfterDownloadURL",
+      "showAfterDownloadStart",
+      "usePayca",
+      "payca",
+      "ads_zone47_init",
+      "regulardownload",
+      "new_delay",
+      "download_frm",
+      "load_form",
+      // "load_ajax",
+      "checkJSPlugins",
+      "check_recaptcha",
+      "check_puzzlecaptcha",
+      "check_captchme",
+      "check_cap4a_captcha",
+      "check_payca",
+      "check_adverigo",
+      "check_coinhive",
+      "check_cpchcaptcha",
+      "sleep",
+      "abSafeCall",
+      // "fid",
+      "msg",
+      "hLoadForm",
+      "ads_zone40_init",
+      "pageTracker",
+      "FuckAdBlock",
+      "fuckAdBlock",
+      "_0x228c",
+      "unblockia",
+      "regeneratorRuntime",
+      "setImmediate",
+      "clearImmediate",
+      "tcpusher",
+      "_0xa5ec",
+      "_0x4b20",
+      "_0x42f0b5",
+      "mm",
+      "LieDetector",
+      "AaDetector",
+      "placementKey",
+      "rp",
+      "__core-js_shared__",
+      "__fp-init",
+      "_0xa6ab",
+      "_0x41de",
+      "scroll_downloadblock",
+    ],
     finalDownloadElementSelector: [],
     addHoverAbility: undefined,
     addInfoBanner: undefined,
     customScript() {
+      this.addJQuery();
       this.$("#download_url")?.removeAttribute("style");
       this.waitUntilSelector("#free_btn").then(() => {
         document.body.insertAdjacentHTML(
@@ -2347,11 +3084,10 @@ const siteRules = {
         );
         document.forms.customForm.submit();
       });
-      this.waitUntilGlobalVariable("hLoadForm").then(() =>
-        clearInterval(window.hLoadForm)
-      );
-      // Skip the whole captcha process haha!!
-      this.waitUntilGlobalVariable("load_form").then(() => {
+      this.waitUntilGlobalVariable("jQuery").then(async () => {
+        await this.sleep(1000);
+        const _this = this;
+        // fetch(`/get_file.php?fid=${fid}&challenge=undefined&response=undefined&t=1`).then(res => res.text()).then(d => d.match(/action="([^"]+")\smethod/)?.[1])
         $.ajax({
           url: `/get_file.php?fid=${fid}&challenge=undefined&response=undefined&t=1`,
           success(data) {
@@ -2359,9 +3095,9 @@ const siteRules = {
               .filter((i, e) => e.tagName == "FORM")
               .removeAttr("onsubmit");
             const dl_link = tmp.attr("action");
-            this.openNative(dl_link, "_self");
+            _this.openNative(dl_link, "_self");
             $("#download_container").html(tmp);
-            this.$("#downloader_file_form a").href = dl_link;
+            _this.$("#downloader_file_form a").href = dl_link;
           },
           error() {
             console.log("error");
@@ -2395,11 +3131,10 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      "ethereum",
       "_gaq",
       "openNav",
       "closeNav",
-      "ss__",
+      "siteScrubber",
       "share_facebook",
       "share_twitter",
       "share_gplus",
@@ -2505,43 +3240,42 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      'ethereum',
-      'setPagination',
-      'jQuery19104661553376883185',
-      'clipboard',
-      '_Hasync',
-      'Tawk_API',
-      'Tawk_LoadStart',
-      'gtag',
-      'dataLayer',
-      'google_tag_manager',
-      'google_tag_data',
-      'GoogleAnalyticsObject',
-      'ga',
-      '$_Tawk_AccountKey',
-      '$_Tawk_WidgetId',
-      '$_Tawk_Unstable',
-      '$_Tawk',
-      'chfh',
-      'chfh2',
-      '_HST_cntval',
-      'Histats',
-      'gaplugins',
-      'gaGlobal',
-      'gaData',
-      'tawkJsonp',
-      '$__TawkEngine',
-      'EventEmitter',
-      '$__TawkSocket',
-      '__core-js_shared__',
-      'regeneratorRuntime',
-      'Tawk_Window',
-      '_HistatsCounterGraphics_0_setValues',
-      'emojione'
+      "setPagination",
+      "jQuery19104661553376883185",
+      "clipboard",
+      "_Hasync",
+      "Tawk_API",
+      "Tawk_LoadStart",
+      "gtag",
+      "dataLayer",
+      "google_tag_manager",
+      "google_tag_data",
+      "GoogleAnalyticsObject",
+      "ga",
+      "$_Tawk_AccountKey",
+      "$_Tawk_WidgetId",
+      "$_Tawk_Unstable",
+      "$_Tawk",
+      "chfh",
+      "chfh2",
+      "_HST_cntval",
+      "Histats",
+      "gaplugins",
+      "gaGlobal",
+      "gaData",
+      "tawkJsonp",
+      "$__TawkEngine",
+      "EventEmitter",
+      "$__TawkSocket",
+      "__core-js_shared__",
+      "regeneratorRuntime",
+      "Tawk_Window",
+      "_HistatsCounterGraphics_0_setValues",
+      "emojione",
     ],
     finalDownloadElementSelector: [],
     addHoverAbility: [["input[name='method_free']", false]],
-    addInfoBanner: [["form", 'beforeend']],
+    addInfoBanner: [["form", "beforeend"]],
     customScript() {
       // this.$("form[action='']")?.submit();
       this.$("input[name='method_free']")?.click();
@@ -2598,7 +3332,6 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      "ethereum",
       "setPagination",
       "_gaq",
       "__tcfapi",
@@ -2714,7 +3447,6 @@ const siteRules = {
     removeIFrames: true,
     removeDisabledAttr: true,
     destroyWindowFunctions: [
-      "ethereum",
       "s",
       "r0BB",
       "z0tt",
@@ -2892,7 +3624,6 @@ const siteRules = {
     removeIFrames: true,
     removeDisabledAttr: true,
     destroyWindowFunctions: [
-      "ethereum",
       "k",
       "_t8h29e4ata9",
       "nd3z8ipji6k",
@@ -2961,11 +3692,14 @@ const siteRules = {
     finalDownloadElementSelector: [
       ["div a.btn-download.get-link[href^='http']"],
     ],
-    addHoverAbility: [["form button[type='submit']:not(#invisibleCaptchaShortlink)", false], ["form button#invisibleCaptchaShortlink", true]],
+    addHoverAbility: [
+      ["form button[type='submit']:not(#invisibleCaptchaShortlink)", false],
+      ["form button#invisibleCaptchaShortlink", true],
+    ],
     addInfoBanner: [["form.text-center", "beforeend"]],
     createCountdown: "#timer.timer",
     customScript() {
-      this.window.onbeforeunload = function(){};
+      this.window.onbeforeunload = function () {};
       this.waitUntilSelector("div#captchaDownload").then(
         (captchaDownloadContainer) => {
           this.createGoogleRecaptcha(
@@ -2995,12 +3729,14 @@ const siteRules = {
           method: "POST",
           mode: "cors",
           credentials: "include",
-        }).then((res) => res.json()).then((data) => {
-          const btn = this.$("a.get-link");
-          btn.href = data.url;
-          btn.classList.remove("disabled");
-          btn.innerText = "Download";
-        });
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            const btn = this.$("a.get-link");
+            btn.href = data.url;
+            btn.classList.remove("disabled");
+            btn.innerText = "Download";
+          });
       });
       /*
       This was needed before destroyWindowFunctions to stop the ads, but not anymore.
@@ -3053,18 +3789,20 @@ for (const site in siteRules) {
     //   "SS" + Math.floor(Math.random() * 982451653).toString(36);
     // oSiteScrubber = window[specialName] = new SiteScrubber(currSiteRules);
     // oSiteScrubber.setup();
-    window.Object.defineProperty(window, "ss__", {
-      value: new SiteScrubber(currSiteRules),
+    window.Object.defineProperty(window, "siteScrubber", {
+      enumerable: false,
       writable: false,
+      configurable: false,
+      value: new SiteScrubber(currSiteRules),
     });
-    // window["ss__"] = new SiteScrubber(currSiteRules);
-    ss__.setup();
+    // window["siteScrubber"] = new SiteScrubber(currSiteRules);
+    siteScrubber.setup();
     break;
     // const currSiteRules = siteRules[site];
     // this.logDebug(`Using site rules for site: ${site}`);
     // return this.setup();
 
-    // this.GM_addStyle(this.currSiteRules?.customStyle);
+    // this.addCustomCSSStyle(this.currSiteRules?.customStyle);
     // if (
     //   this.document.readyState === "complete" ||
     //   this.document.readyState === "interactive"
