@@ -41,7 +41,6 @@
 // @grant        none
 // ==/UserScript==
 
-console.log(window.onbeforeunload)
 
 class SiteScrubber {
   constructor(rules) {
@@ -2032,10 +2031,95 @@ const siteRules = {
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      'ethereum',
+      'gtag',
+      'dataLayer',
+      'adsbygoogle',
+      'google_tag_manager',
+      'google_js_reporting_queue',
+      'google_srt',
+      'google_logging_queue',
+      'google_ad_modifications',
+      'ggeac',
+      'google_measure_js_timing',
+      'google_reactive_ads_global_state',
+      '_gfp_a_',
+      'google_sa_queue',
+      'google_sl_win',
+      'google_process_slots',
+      'google_spfd',
+      'google_unique_id',
+      'google_sv_map',
+      'google_lpabyc',
+      'google_user_agent_client_hint',
+      'google_tag_data',
+      'gaGlobal',
+      'Goog_AdSense_getAdAdapterInstance',
+      'Goog_AdSense_OsdAdapter',
+      'google_sa_impl',
+      'google_persistent_state_async',
+      '__google_ad_urls',
+      'google_global_correlator',
+      '__google_ad_urls_id',
+      'googleToken',
+      'googleIMState',
+      '_gfp_p_',
+      'processGoogleToken',
+      'google_prev_clients',
+      'goog_pvsid',
+      'google_jobrunner',
+      'ampInaboxIframes',
+      'ampInaboxPendingMessages',
+      'goog_sdr_l',
+      'google_osd_loaded',
+      'google_onload_fired',
+      'Goog_Osd_UnloadAdBlock',
+      'Goog_Osd_UpdateElementToMeasure',
+      'google_osd_amcb',
+      '$insertQueue7cbd83f132f5$',
+      '1bgbb027-3b87-ae67-26ar-hz150f600z16',
+      'RedirectCookies',
+      'filename',
+      'extension',
+      'd',
+      'urlsArray',
+      'randomNumber',
+      'currentImageUrl',
+      'yxhpa',
+      'yxhpb',
+      'yxhpo',
+      'yllixNetworkLoader',
+      'Headroom',
+      // 'GotoLink',
+      'process_430610',
+      '_0x4ab4',
+      '_0x4f3e',
+      'sbslms',
+      'process_430474',
+      'closure_lm_259947',
+      'onYouTubeIframeAPIReady',
+      '$insert7cbd83f132f5$',
+      'closure_lm_94135',
+      '_0xa5ec',
+      '_0x4b20',
+      '_0x42f0b5',
+      'mm',
+      'rp',
+      'LieDetector',
+      'AaDetector',
+      'placementKey',
+      '_0xa6ab',
+      '_0x41de',
+      'googletag',
+      'GoogleGcLKhOms',
+      'google_image_requests'
+    ],
     finalDownloadElementSelector: [],
     addHoverAbility: undefined,
     addInfoBanner: undefined,
     customScript() {
+      return;
       this.waitUntilSelector("a#downloadb").then((btn) => {
         btn?.click();
       });
@@ -2420,22 +2504,57 @@ const siteRules = {
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      'ethereum',
+      'setPagination',
+      'jQuery19104661553376883185',
+      'clipboard',
+      '_Hasync',
+      'Tawk_API',
+      'Tawk_LoadStart',
+      'gtag',
+      'dataLayer',
+      'google_tag_manager',
+      'google_tag_data',
+      'GoogleAnalyticsObject',
+      'ga',
+      '$_Tawk_AccountKey',
+      '$_Tawk_WidgetId',
+      '$_Tawk_Unstable',
+      '$_Tawk',
+      'chfh',
+      'chfh2',
+      '_HST_cntval',
+      'Histats',
+      'gaplugins',
+      'gaGlobal',
+      'gaData',
+      'tawkJsonp',
+      '$__TawkEngine',
+      'EventEmitter',
+      '$__TawkSocket',
+      '__core-js_shared__',
+      'regeneratorRuntime',
+      'Tawk_Window',
+      '_HistatsCounterGraphics_0_setValues',
+      'emojione'
+    ],
     finalDownloadElementSelector: [],
-    addHoverAbility: undefined,
-    addInfoBanner: undefined,
+    addHoverAbility: [["input[name='method_free']", false]],
+    addInfoBanner: [["form", 'beforeend']],
     customScript() {
       // this.$("form[action='']")?.submit();
       this.$("input[name='method_free']")?.click();
       this.$$("*").forEach((e) => e.setAttribute("style", ""));
-      this.$$("body > div[id]")?.[1];
+      // this.$$("body > div[id]")?.[1];
 
       // Allow time for hCaptcha to load
-      this.waitUntilGlobalVariable("hcaptcha").then(() =>
-        hCaptchaListener(this.$("form[name='F1']"))
-      );
-      this.waitUntilGlobalVariable("Tawk_Window", "app", "$el").then((ele) =>
-        ele.remove()
-      );
+      // this.waitUntilGlobalVariable("hcaptcha").then(() =>
+      //   hCaptchaListener(this.$("form[name='F1']"))
+      // );
+      // this.waitUntilGlobalVariable("Tawk_Window", "app", "$el").then((ele) =>
+      //   ele.remove()
+      // );
     },
   },
   veryfiles: {
@@ -2790,7 +2909,7 @@ const siteRules = {
       "Dropzone",
       "onloadRecaptchaCallback",
       "onloadHCaptchaCallback",
-      "onbeforeunload",
+      // "onbeforeunload",
       "gtag",
       "dataLayer",
       "a",
@@ -2846,6 +2965,7 @@ const siteRules = {
     addInfoBanner: [["form.text-center", "beforeend"]],
     createCountdown: "#timer.timer",
     customScript() {
+      this.window.onbeforeunload = function(){};
       this.waitUntilSelector("div#captchaDownload").then(
         (captchaDownloadContainer) => {
           this.createGoogleRecaptcha(
