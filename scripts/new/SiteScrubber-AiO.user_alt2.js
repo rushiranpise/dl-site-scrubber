@@ -38,6 +38,12 @@
 // @include      /^(?:https?:\/\/)?(?:www\.)?clicknupload\.cc\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?veryfiles\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?douploads\.net\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?tusfiles\.com\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?centfile\.com\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?short\.katflys\.com\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?fastclick\.to\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?chedrive\.com\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?nitro\.download\//
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
@@ -45,6 +51,7 @@
 class SiteScrubber {
   constructor(rules) {
     this.o_debug = true;
+    this.ssButtonWatchDog = true;
 
     this.window = window;
     this.document = window.document;
@@ -64,11 +71,18 @@ class SiteScrubber {
     this.origAddEventListener = EventTarget.prototype.addEventListener;
     this.origAppendChild = HTMLElement.prototype.appendChild;
     this.origSetInterval = window.setInterval.bind(window);
+    this.origClearInterval = window.clearInterval.bind(window);
     this.origSetTimeout = window.setTimeout.bind(window);
+    this.origClearTimeout = window.clearTimeout.bind(window);
 
-    // Just in case we do not specify
-    this.countdownSecondsLeft = 30;
-    this.countdownInterval = null;
+    this.countdownSecondsLeft = 0;
+    // this.countdownInterval = null;
+    this.countdownPhantomElement = this.document.createElement("i");
+
+    this._buttons = [];
+    this._intervals = {};
+    this._listeners = [];
+    this._timeouts = {};
 
     this.currSiteRules = rules;
     // this.siteRules = siteRules;
@@ -78,6 +92,16 @@ class SiteScrubber {
     this.logDebug("Initializing SiteScrubber...");
 
     this.destroyWindowFunctions(this.currSiteRules?.destroyWindowFunctions);
+    this.addCustomCSSStyle(
+      `.ss-btn{display:inline-block!important;padding:24px 32px!important;border:unset!important;color:#dfdfdf!important;background:#9d0000!important;text-transform:uppercase!important;font-size:24px!important;letter-spacing:.15em!important;transition:all .1s!important;position:relative!important;overflow:hidden!important;z-index:1!important}.ss-w-100{width:100%!important}.ss-btn-ready:after{content:"";position:absolute;bottom:0;left:0;width:100%;height:100%;background-color:#109d00;transition:all .1s;z-index:-2}.ss-btn-ready:before{content:"";position:absolute;bottom:0;left:0;width:0%;height:100%;background-color:#1a0;transition:all .1s linear;z-index:-1}.ss-btn-ready:hover:before{width:100%;transition:all 2s linear}.ss-btn:active{transform:scale(.975)!important}.ss-btn:focus{outline:0!important}`
+    );
+    this.addCustomCSSStyle(
+      `.ss-alert-warning{color:#8a6d3b;background-color:#fcf8e3;border-color:#faebcc}.ss-alert{width:100%;padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:4px}.ss-col-md-12{width:100%}.ss-mt-5{margin-top:5em}.ss-text-center{text-align:center}`
+    );
+    if (this.ssButtonWatchDog === true) {
+      // Ready, so click/submit
+      this.waitUntilSelector(".ss-btn-ready").then((ssBtn) => ssBtn.click());
+    }
     if (
       this.document.readyState === "complete" ||
       this.document.readyState === "interactive"
@@ -117,8 +141,8 @@ class SiteScrubber {
     this.logDebugNaked(arguments);
     // this.window.alert(data);
   }
-  ifElementExists(query, fn = () => undefined) {
-    return this.$(query) && fn(query);
+  ifElementExists(query, fn = () => void 0) {
+    return this.$(query) && fn(this.$(query));
   }
   addCustomCSSStyle(cssStr) {
     if (!cssStr) {
@@ -139,11 +163,10 @@ class SiteScrubber {
     if (!query) {
       return;
     }
-    const _this = this;
     this.logDebug(`Waiting for selector: ${query}`);
     while (!this.$(query)) {
       // if not found, wait and check again in 500 milliseconds
-      await new Promise((r) => _this.origSetTimeout(r, 500));
+      await new Promise((r) => this.origSetTimeout(r, 500));
     }
     this.logDebug(`Found element by selector: ${query}`);
     return new Promise((resolve) => {
@@ -155,7 +178,6 @@ class SiteScrubber {
     this.logDebug(
       `Waiting for global variable: window.${variableNames.join(".")}`
     );
-    const _this = this;
     let curr = window;
     while (curr == window || curr == undefined) {
       curr = window;
@@ -164,7 +186,7 @@ class SiteScrubber {
         curr = curr?.[k];
       }
       // if not found, wait and check again in 500 milliseconds
-      await new Promise((r) => _this.origSetTimeout(r, 500));
+      await new Promise((r) => this.origSetTimeout(r, 500));
     }
     this.logDebug(`Found global variable: window.${variableNames.join(".")}`);
     return new Promise((resolve) => {
@@ -172,6 +194,7 @@ class SiteScrubber {
       resolve(curr);
     });
   }
+  // not needed?
   finalDownloadLinkOpener(query, regex) {
     if (!query) {
       return;
@@ -208,13 +231,14 @@ class SiteScrubber {
       if (typeof e == "string" || e instanceof String) {
         // remove found elements
         this.$$(e).forEach((ele) => ele.remove());
+        // this.$$(e).forEach((ele) => (ele.style.display = "none"));
       } else if (e instanceof HTMLElement) {
         // remove HTMLElement
         e.remove();
       }
     });
   }
-  removeElementsByRegex(query, regex) {
+  removeElementsByRegex({ query, regex }) {
     if (!query) {
       return;
     }
@@ -233,24 +257,152 @@ class SiteScrubber {
       this.document.head || this.document.body || this.document.documentElement;
     targ.appendChild(s);
   }
-  async addGoogleRecaptchaListener(formElement, timer = 0) {
-    const _this = this;
-    if (!formElement) {
+  addInterval({ fn, interval, customID }) {
+    let error = false;
+    if ("function" !== typeof fn) {
+      this.logDebug("addInterval() - Bad function input");
+      error = true;
+    } else if ("number" !== typeof interval) {
+      this.logDebug("addInterval() - Bad interval input");
+      error = true;
+    } else if ("string" !== typeof customID) {
+      this.logDebug("addInterval() - Bad customID input");
+      error = true;
+    }
+    if (error) {
+      this.logDebugNaked(arguments);
       return;
     }
-    if (formElement instanceof HTMLElement && formElement.tagName == "FORM") {
-      this.log("Form selected!");
-    } else if (
-      typeof formElement == "string" ||
-      formElement instanceof String
-    ) {
-      // try to find form based on selector
-      formElement = this.$(formElement);
+    const id = this.origSetInterval(fn, interval);
+    this._intervals[customID || id] = {
+      fn: fn.toString(),
+      interval: interval,
+      id: id,
+      customID: customID,
+    };
+    return id;
+  }
+  removeInterval(id) {
+    const interval = this._intervals[id]["id"];
+    if (interval) {
+      delete this._intervals[id];
+      return this.origClearInterval(interval);
+    } else {
+      this.logDebug(
+        `removeInterval() - Failed to remove interval with ID: ${id}`
+      );
     }
-    if (!formElement || !window.grecaptcha) {
+  }
+  addTimeout({ fn, timeout, customID }) {
+    let error = false;
+    if ("function" !== typeof fn) {
+      this.logDebug("addTimeout() - Bad function input");
+      error = true;
+    } else if ("number" !== typeof timeout) {
+      this.logDebug("addTimeout() - Bad timeout input");
+      error = true;
+    } else if ("string" !== typeof customID || !(customID instanceof String)) {
+      this.logDebug("addTimeout() - Bad customID input");
+      error = true;
+    }
+    if (error) {
+      this.logDebugNaked(arguments);
+      return;
+    }
+    const id = this.origSetTimeout(fn, timeout);
+    this._timeouts[customID || id] = {
+      fn: fn.toString(),
+      timeout: timeout,
+      id: id,
+      customID: customID,
+    };
+    return customID || id;
+  }
+  removeTimeout(id) {
+    const timeout = this._timeouts[id]["id"];
+    if (timeout) {
+      delete this._timeouts[id];
+      return this.origClearTimeout(timeout);
+    } else {
+      this.logDebug(
+        `removeTimeout() - Failed to remove timeout with ID: ${id}`
+      );
+    }
+  }
+  addListener({ element, event, listener, options }) {
+    let error = false;
+    if ("string" !== typeof event) {
+      this.logDebug("addListener() - Bad event input");
+      error = true;
+    } else if ("function" !== typeof listener) {
+      this.logDebug("addListener() - Bad listener input");
+      error = true;
+    }
+    if (error) {
+      this.logDebugNaked(arguments[0]);
+      return;
+    }
+    const el = element;
+    if (!el?.trackedEvents) {
+      el.trackedEvents = {};
+    }
+    if (!el.trackedEvents[event]) {
+      el.trackedEvents[event] = listener;
+    } else if (el.trackedEvents[event].toString() == listener.toString()) {
+      this.logDebug(`addListener() - event '${event}' already added`);
+      this.logDebugNaked(arguments[0]);
+      return;
+    }
+    this._listeners.push(arguments[0]);
+    return this.origAddEventListener.bind(el)(
+      event,
+      listener,
+      options || false
+    );
+  }
+  removeListener({ element, event }) {
+    if (!element?.trackedEvents) {
+      this.logDebug("removeListener() - No events found");
+      return;
+    }
+    const el = element;
+    const listener = el.trackedEvents[event];
+    delete el.trackedEvents[event];
+    const removeObj = this._listeners.find(
+      (x) => x.element == el && x.listener == listener
+    );
+    this._listeners = this._listeners.filter((x) => x != removeObj);
+    return el.removeEventListener(event, listener);
+  }
+  // not needed?
+  async addCaptchaListener(formElement, timer = 0) {
+    const form = this.getDOMElement(formElement);
+    if (form === null) {
       this.log("No Google Captcha found...");
+      this.logDebug("addCaptchaListener() - failed to find element");
       return;
+    } else {
+      this.log("Form selected!");
     }
+
+    // const buttonStatusInterval = this.addInterval({
+    //   fn: () => {
+    //     if (this.window.grecaptcha?.getResponse?.()) {
+    //       this._buttons.forEach((button) => {
+    //         button.classList.add("ss-ready");
+    //         // button.classList.remove("ss-incomplete");
+    //       });
+    //     } else {
+    //       this._buttons.forEach((button) => {
+    //         // button.classList.add("ss-incomplete");
+    //         button.classList.remove("ss-ready");
+    //       });
+    //     }
+    //   },
+    //   interval: 100,
+    //   customID: "ss-button-checker",
+    // });
+
     return new Promise((res, rej) => {
       // save current date
       const then = new Date();
@@ -258,41 +410,46 @@ class SiteScrubber {
       const INTERVAL = 250;
       // interval to check every 250 milliseconds if ReCAPTCHA
       // has been completed, then the form gets submitted
-      const checker = _this.origSetInterval(() => {
-        if (
-          window.grecaptcha?.getResponse?.() &&
-          Math.floor((new Date() - then) / 1000) > timer
-        ) {
-          // stop interval from continuing
-          clearInterval(checker);
-          formElement.submit();
-          res();
-        } else {
-          counter++;
-        }
-        if (counter >= 7200) {
-          // stop interval and give up checking
-          clearInterval(checker);
-          res();
-        }
-      }, INTERVAL);
+      const checker = this.addInterval({
+        fn: () => {
+          if (
+            (window.grecaptcha?.getResponse?.() ||
+              window.hcaptcha?.getResponse?.()) &&
+            Math.floor((new Date() - then) / 1000) > timer
+          ) {
+            // stop interval from continuing
+            // clearInterval(checker);
+            this.removeInterval("RecaptchaListenerInterval");
+            formElement.submit();
+            res();
+          } else {
+            counter++;
+          }
+          if (counter >= 7200) {
+            // stop interval and give up checking
+            // clearInterval(checker);
+            this.removeInterval("RecaptchaListenerInterval");
+            res();
+          }
+        },
+        interval: INTERVAL,
+        customID: "RecaptchaListenerInterval",
+      });
     });
   }
-  createGoogleRecaptcha(elementTarget, site_key, position = "beforeend") {
-    if (typeof elementTarget == "string" || elementTarget instanceof String) {
-      elementTarget = this.$(elementTarget);
-    }
-    if (!(elementTarget instanceof HTMLElement) || null === elementTarget) {
+  async createGoogleRecaptcha(elementTarget, site_key, position = "beforeend") {
+    const target = this.getDOMElement(elementTarget);
+    if (target === null) {
       this.logDebug("createGoogleRecaptcha - failed to find element");
       return;
     }
     this.logDebug("createGoogleRecaptcha() - element to add under");
-    this.logDebugNaked(elementTarget);
+    this.logDebugNaked(target);
     const script = this.document.createElement("script");
     script.src = "https://www.google.com/recaptcha/api.js";
     this.document.body.appendChild(script);
     this.waitUntilGlobalVariable("grecaptcha").then(() => {
-      elementTarget.insertAdjacentHTML(
+      target.insertAdjacentHTML(
         position,
         `<div id="ss-recaptcha" data-sitekey="${site_key}" data-starttime="${+new Date()}"></div>`
       );
@@ -301,21 +458,23 @@ class SiteScrubber {
       });
     });
   }
-  modifyGoogleRecaptcha(timer = 0) {
+  modifyGoogleRecaptcha(timer = 0, cb) {
     const grecaptchaElem = this.$(".g-recaptcha");
     const site_key = grecaptchaElem?.getAttribute("data-sitekey");
     grecaptchaElem.innerHTML = `<div id="ss-recaptcha" data-sitekey="${site_key}" data-starttime="${+new Date()}"></div>`;
     grecaptcha.render("ss-recaptcha", {
       sitekey: site_key,
-      callback() {
-        const form = __ss.findParentElementByTagName(
-          __ss.$("#ss-recaptcha"),
-          "form"
-        );
-        if (form) {
-          form.submit();
-        }
-      },
+      callback:
+        cb ||
+        function () {
+          const form = siteScrubber.findParentElementByTagName(
+            siteScrubber.$("#ss-recaptcha"),
+            "form"
+          );
+          if (form) {
+            form.submit();
+          }
+        },
     });
   }
   removeIFrames() {
@@ -335,33 +494,36 @@ class SiteScrubber {
       e.removeAttribute("disabled");
     });
   }
-  hideElements(elements = []) {
-    if (!elements.length) {
+  hideElementsByDisplay(elements = []) {
+    if (elements.length === 0) {
       return;
     }
-    // 0 - displayFlag --- display: none
-    // 1 - displayFlag --- visibility: hidden
-    this.log("Running hideElements");
-    if (typeof elements == "string" || elements instanceof String) {
+    this.log("Running hideElementsByDisplay");
+    if (this.isQueryString(elements)) {
       elements = [elements];
     }
     [...elements].forEach((e) => {
-      if (typeof e == "string" || e instanceof String) {
-        if (displayFlag) {
-          // 1 - displayFlag --- visibility: hidden
-          this.$$(e).forEach((ele) => (ele.style.visibility = "hidden"));
-        } else {
-          // 0 - displayFlag --- display: none
-          this.$$(e).forEach((ele) => (ele.style.display = "none"));
-        }
-      } else if (e instanceof HTMLElement) {
-        if (displayFlag) {
-          // 1 - displayFlag --- visibility: hidden
-          e.style.visibility = "hidden";
-        } else {
-          // 0 - displayFlag --- display: none
-          e.style.display = "none";
-        }
+      if (this.isQueryString(e)) {
+        this.$$(e).forEach((ele) => (ele.style.display = "none"));
+      } else if (this.isElement(e)) {
+        e.style.display = "none";
+      }
+    });
+    this.logDebug(`Elements hidden: ${elements}`);
+  }
+  hideElementsByVisibility(elements = []) {
+    if (elements.length === 0) {
+      return;
+    }
+    this.log("Running hideElementsByVisibility");
+    if (this.isQueryString(elements)) {
+      elements = [elements];
+    }
+    [...elements].forEach((e) => {
+      if (this.isQueryString(e)) {
+        this.$$(e).forEach((ele) => (ele.style.visibility = "hidden"));
+      } else if (this.isElement(e)) {
+        e.style.visibility = "hidden";
       }
     });
     this.logDebug(`Elements hidden: ${elements}`);
@@ -401,51 +563,84 @@ class SiteScrubber {
     );
     return false;
   }
-  addHoverAbility(elements = [], requireGoogleReCAPTCHA = false) {
-    if (!elements) {
+  isElement(element) {
+    return element instanceof Element;
+  }
+  isQueryString(query) {
+    return (
+      !this.isElement(query) &&
+      (typeof query == "string" || query instanceof String)
+    );
+  }
+  isEmptyObject(obj) {
+    return JSON.stringify(obj) === "{}";
+  }
+  getDOMElement(request) {
+    if (this.isElement(request)) {
+      return request;
+    } else if (this.isQueryString(request)) {
+      return this.$(request);
+    }
+    return null;
+  }
+  addHoverAbility(element, requireCaptcha = false) {
+    if (!element) {
       return;
     }
-    const _this = this;
-    function addEvent(element) {
-      // element.addEventListener = _this.origAddEventListener;
-      if (requireGoogleReCAPTCHA) {
-        // element.addEventListener
-        _this.origAddEventListener.bind(element)(
-          "mouseenter",
-          () => {
-            element.dataset.timeout = _this.origSetTimeout(function () {
-              if (window.grecaptcha.getResponse()) element.click();
-            }, 2000);
-          },
-          false
-        );
-      } else {
-        // element.addEventListener
-        _this.origAddEventListener.bind(element)(
-          "mouseenter",
-          () => {
-            element.dataset.timeout = _this.origSetTimeout(function () {
+    const addEvent = (element) => {
+      let fn = () => {};
+      if (requireCaptcha) {
+        fn = () => {
+          element.dataset.timeout = this.origSetTimeout(() => {
+            if (
+              this.countdownSecondsLeft === 0 &&
+              window.grecaptcha?.getResponse?.()
+            ) {
               element.click();
-            }, 2000);
-          },
-          false
-        );
+            }
+          }, 2000);
+        };
+      } else {
+        fn = () => {
+          element.dataset.timeout = this.origSetTimeout(() => {
+            if (this.countdownSecondsLeft === 0) {
+              element.click();
+            }
+          }, 2000);
+        };
       }
-      _this.logDebug(`Added 'mouseenter' event to ${element.innerHTML}`);
-      // element.addEventListener
-      _this.origAddEventListener.bind(element)(
-        "mouseleave",
-        () => {
+      // this.origAddEventListener.bind(element)("mouseenter", fn, false);
+      this.addListener({
+        element: element,
+        event: "mouseenter",
+        listener: fn,
+        options: false,
+      });
+      this.logDebug(`Added 'mouseenter' event to ${element.innerHTML}`);
+      // this.origAddEventListener.bind(element)(
+      //   "mouseleave",
+      //   () => {
+      //     clearTimeout(element.dataset.timeout);
+      //   },
+      //   false
+      // );
+      this.addListener({
+        element: element,
+        event: "mouseleave",
+        listener: () => {
           clearTimeout(element.dataset.timeout);
         },
-        false
-      );
-      _this.logDebug(`Added 'mouseleave' event to ${element.innerHTML}`);
+        options: false,
+      });
+      this.logDebug(`Added 'mouseleave' event to ${element.innerHTML}`);
+    };
+    // if (typeof element == "string" || element instanceof String) {
+    //   element = [element];
+    // }
+    if (!Array.isArray(element)) {
+      element = [element];
     }
-    if (typeof elements == "string" || elements instanceof String) {
-      elements = [elements];
-    }
-    [...elements].forEach((e) => {
+    [...element].forEach((e) => {
       if (typeof e == "string" || e instanceof String) {
         this.$$(e).forEach(addEvent);
       } else if (e instanceof HTMLElement) {
@@ -453,27 +648,24 @@ class SiteScrubber {
       }
     });
   }
-  addInfoBanner(elementToAddTo, where = "beforeend") {
-    if (elementToAddTo instanceof HTMLElement) {
+  addInfoBanner({ targetElement, where = "beforeend" }) {
+    if (targetElement instanceof HTMLElement) {
       // Already an HTMLElement
     } else if (
-      typeof elementToAddTo == "string" ||
-      elementToAddTo instanceof String
+      typeof targetElement == "string" ||
+      targetElement instanceof String
     ) {
-      elementToAddTo = this.$(elementToAddTo);
+      targetElement = this.$(targetElement);
     }
-    if (!elementToAddTo) {
+    if (!targetElement) {
       return;
     }
     this.logDebug("Adding SiteScrubber hover info banner");
 
-    this.addCustomCSSStyle(
-      `.ss-alert-warning{color:#8a6d3b;background-color:#fcf8e3;border-color:#faebcc}.ss-alert{width:100%;padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:4px}.ss-col-md-12{width:100%}.ss-mt-5{margin-top:5em}.ss-text-center{text-align:center}`
-    );
     const newNode = `<div class="ss-alert ss-alert-warning ss-mt-5 ss-text-center">TO PREVENT MALICIOUS REDIRECT, <b>HOVER</b> OVER THE BUTTON FOR 2 SECONDS TO SUBMIT CLEANLY</div>`;
-    elementToAddTo.insertAdjacentHTML(where, newNode);
+    targetElement.insertAdjacentHTML(where, newNode);
     this.logDebug(
-      `addInfoBanner() - elementToAddTo: ${elementToAddTo}, ${where}`
+      `addInfoBanner() - elementToAddTo: ${targetElement}, ${where}`
     );
   }
   destroyWindowFunctions(options = []) {
@@ -596,7 +788,7 @@ class SiteScrubber {
     HTMLElement.prototype.appendChild = customAppendChild;
     _this.document.appendChild = customAppendChild;
   }
-  createCountdown(element, timer) {
+  createCountdown({ element = this.countdownPhantomElement, timer }) {
     if (typeof element == "string" || element instanceof String) {
       element = this.$(element);
     }
@@ -610,23 +802,197 @@ class SiteScrubber {
       timer = +element.innerText;
     }
     this.logDebug("createCountdown - found element, creating timer");
-    siteScrubber.countdownSecondsLeft = timer;
-    siteScrubber.countdownInterval = siteScrubber.origSetInterval(
-      siteScrubber.tick.bind(this, element),
-      1000
-    );
+    this.countdownSecondsLeft = timer;
+    this.addInterval({
+      fn: this.tick.bind(this, element),
+      interval: 1000,
+      customID: "countdown-interval",
+    });
+    // this.countdownInterval = this.origSetInterval(
+    //   this.tick.bind(this, element),
+    //   1000
+    // );
   }
   tick(element) {
-    const remaining = --siteScrubber.countdownSecondsLeft;
-    if (remaining < 0) {
-      clearInterval(siteScrubber.countdownInterval);
-      siteScrubber.countdownInterval = null;
+    const remaining = --this.countdownSecondsLeft;
+    element.innerText = remaining;
+    if (remaining <= 0) {
+      // clearInterval(this.countdownInterval);
+      // this.countdownInterval = null;
+      this.removeInterval("countdown-interval");
     } else {
-      element.innerText = remaining;
       this.logDebug(`Tick: ${remaining}`);
     }
   }
+  copyAttributesFromElement(sourceElement, targetElement) {
+    if (
+      sourceElement instanceof HTMLElement &&
+      targetElement instanceof HTMLElement
+    ) {
+      [...sourceElement.attributes].forEach((attr) => {
+        targetElement.setAttribute(attr.nodeName, attr.nodeValue);
+      });
+    } else {
+      this.log(
+        "copyAttributesFromElement() - failed to copy attributes with given elements"
+      );
+      this.logDebugNaked(sourceElement);
+      this.logDebugNaked(targetElement);
+    }
+  }
+  modifyButton(
+    button,
+    {
+      disabled = false,
+      replaceWithForm = false,
+      replaceWithTag,
+      copyAttributesFromElement,
+      customText,
+      className,
+      id,
+      style,
+      props,
+      makeListener,
+      requiresCaptcha,
+      addHoverAbility,
+      moveTo = {
+        target: undefined,
+        position: undefined,
+        findParentByTag: undefined,
+      },
+    } = {}
+  ) {
+    button = this.getDOMElement(button);
+
+    if (null === button) {
+      this.logDebug("modifyButton - failed to find element");
+      return;
+    }
+
+    // Check and alert user of error
+    if (button.tagName === "A") {
+      const dl_link = button.href;
+      if (
+        this.window.location.href.match(/^https:/i) &&
+        !dl_link.match(/^https:/i)
+      ) {
+        // https://blog.chromium.org/2020/02/protecting-users-from-insecure.html
+        this.document.body.insertAdjacentHTML(
+          "afterbegin",
+          `<p class='ss-alert ss-alert-warning ss-text-center'>This file should be served over HTTPS. This download has been blocked. See <a href='https://blog.chromium.org/2020/02/protecting-users-from-insecure.html'>https://blog.chromium.org/2020/02/protecting-users-from-insecure.html</a> for more details.</p>`
+        );
+      }
+    }
+
+    if (replaceWithForm === true) {
+      if (button.tagName === "A") {
+        const form = this.makeSafeForm({
+          actionURL: button.href,
+          method: "GET",
+        });
+        button.parentElement.replaceChild(form, button);
+        button = form.querySelector(".ss-btn");
+      }
+    } else if (replaceWithTag && typeof replaceWithTag === "string") {
+      const customTag = this.document.createElement(replaceWithTag);
+      if (this.isElement(copyAttributesFromElement)) {
+        this.copyAttributesFromElement(copyAttributesFromElement, customTag);
+      } else {
+        this.copyAttributesFromElement(button, customTag);
+      }
+      button.parentElement.replaceChild(customTag, button);
+      button = customTag;
+    }
+
+    this._buttons.push(button);
+
+    if (customText) {
+      button.innerHTML = customText;
+    }
+    button.className = className || "ss-btn ss-w-100";
+    if (void 0 !== id) {
+      button.id = id;
+    }
+    if (void 0 !== style) {
+      button.style = style;
+    }
+    for (let key in props) {
+      button[key] = props[key];
+    }
+    if (makeListener === true) {
+      let fn = () => {};
+      if (requiresCaptcha === true) {
+        fn = () => {
+          if (
+            this.countdownSecondsLeft === 0 &&
+            (window.grecaptcha?.getResponse?.() ||
+              window.hcaptcha?.getResponse?.())
+          ) {
+            button.classList.add("ss-btn-ready");
+          } else {
+            button.classList.remove("ss-btn-ready");
+          }
+        };
+      } else {
+        fn = () => {
+          if (this.countdownSecondsLeft === 0) {
+            button.classList.add("ss-btn-ready");
+          } else {
+            button.classList.remove("ss-btn-ready");
+          }
+        };
+      }
+      this.addInterval({
+        fn: fn,
+        interval: 100,
+        customID: "ss-btn-ready-listner",
+      });
+    }
+    if (addHoverAbility !== false) {
+      if (!requiresCaptcha) {
+        button.classList.add("ss-btn-ready");
+      }
+      this.addHoverAbility(button, !!requiresCaptcha);
+    }
+    /**
+     * target
+     * position
+     * findParentByTag
+     */
+    if (moveTo.target && moveTo.position) {
+      let el = this.getDOMElement(moveTo.target);
+      const pos = moveTo.position;
+      const findParentByTag = moveTo.findParentByTag;
+
+      if (null === el) {
+        this.logDebug("modifyButton.moveTo - failed to find element");
+      } else {
+        let target = el;
+        if (findParentByTag) {
+          target = this.findParentElementByTagName(el, findParentByTag);
+        }
+        button.remove();
+        target.insertAdjacentElement(pos, button);
+      }
+    }
+    if (disabled !== true) {
+      button.disabled = false;
+    }
+    return button;
+  }
+  makeSafeForm({ actionURL, method = "GET" }) {
+    const form = this.document.createElement("form");
+    form.action = actionURL;
+    form.method = method;
+
+    const submitBtn = this.document.createElement("button");
+    submitBtn.type = "submit";
+    this.modifyButton(submitBtn, { customText: "Start Download" });
+    form.appendChild(submitBtn);
+    return form;
+  }
   applyRules() {
+    console.time("ss");
     this.log("STARTING CLEANER!");
 
     if (
@@ -640,9 +1006,9 @@ class SiteScrubber {
     } else {
       this.log("Assuming this is a download page.");
     }
-
     this.addCustomCSSStyle(this.currSiteRules?.customStyle);
     this.log("Added custom CSS styling");
+
     if (this.currSiteRules?.createCountdown) {
       this.createCountdown(this.currSiteRules?.createCountdown);
       this.log(
@@ -651,13 +1017,20 @@ class SiteScrubber {
     }
     this.removeElements(this.currSiteRules?.remove);
     // this.plug("Removed Elements");
-    this.currSiteRules?.removeByRegex?.forEach(([selector, regex]) =>
-      this.removeElementsByRegex(selector, regex)
+    // this.currSiteRules?.removeByRegex?.forEach(([selector, regex]) =>
+    //   this.removeElementsByRegex(selector, regex)
+    // );
+    this.currSiteRules?.removeByRegex?.forEach((removeByRegexOptions) =>
+      this.removeElementsByRegex(removeByRegexOptions)
     );
     this.log("Removed elements");
     // this.plug("Removed Elements By Regex");
-    this.hideElements(this.currSiteRules?.hideElements);
-    this.log("Hid elements");
+
+    //////////////
+    this.hideElementsByDisplay(this.currSiteRules?.hideElementsByDisplay);
+    // this.log("Hid elements");
+    //////////////
+
     if (this.currSiteRules?.removeIFrames) {
       this.removeIFrames();
       this.log("Removed iFrames");
@@ -670,12 +1043,20 @@ class SiteScrubber {
       ([selector, regex]) => this.finalDownloadLinkOpener(selector, regex)
     );
     this.currSiteRules?.addHoverAbility?.forEach(
-      ([elements, requiresRecaptcha]) =>
-        this.addHoverAbility(elements, requiresRecaptcha)
+      ([elements, requiresCaptcha]) =>
+        this.addHoverAbility(elements, requiresCaptcha)
     );
-    this.currSiteRules?.addInfoBanner?.forEach(([element, where]) =>
-      this.addInfoBanner(element, where)
+    // this.currSiteRules?.addInfoBanner?.forEach(([element, where]) =>
+    //   this.addInfoBanner(element, where)
+    // );
+    this.currSiteRules?.addInfoBanner?.forEach((addInfoBannerOptions) =>
+      this.addInfoBanner(addInfoBannerOptions)
     );
+    if (this.currSiteRules?.modifyButtons) {
+      this.currSiteRules?.modifyButtons?.forEach(([button, options]) => {
+        this.modifyButton(button, options);
+      });
+    }
     this.log("Running site's custom made script");
     this.currSiteRules?.customScript?.bind(this)?.();
   }
@@ -686,7 +1067,7 @@ class SiteScrubber {
 const siteRules = {
   dropapk: {
     host: ["drop.download", "dropapk.to"],
-    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}#container{background:#121212!important}.download_box{background-color:#323232!important}.bg-white{background:#121212!important}`,
+    customStyle: `html,body,#container{background:#121212!important;color:#dfdfdf!important}.download_box,.download_method{background-color:#323232!important}.bg-white{background:#121212!important}table span{color:red!important}`,
     downloadPageCheckBySelector: [
       "button#method_free",
       "button#downloadbtn",
@@ -705,18 +1086,88 @@ const siteRules = {
       "nav",
       ".payment_methods",
       "adsbox",
+      ".features",
+      "div.header",
+      // "#container > form > div > div > div.col-md-4:nth-child(-n+3)",
     ],
-    removeByRegex: [[".download_method", /fast download/gi]],
+    removeByRegex: [{ query: ".download_method", regex: /fast download/gi }],
     removeIFrames: true,
     removeDisabledAttr: true,
-    destroyWindowFunctions: ["ethereum"],
-    finalDownloadElementSelector: [["div.download_box a"]],
-    addHoverAbility: [["#downloadbtn"], ["a.btn-block"]],
-    addInfoBanner: ["div.download_box"],
+    destroyWindowFunctions: [
+      "setPagination",
+      "gtag",
+      "dataLayer",
+      "google_tag_manager",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_reactive_ads_global_state",
+      "_gfp_a_",
+      "adsbygoogle",
+      "google_tag_data",
+      "GoogleAnalyticsObject",
+      "ga",
+      "google_user_agent_client_hint",
+      "google_sa_queue",
+      "google_sl_win",
+      "google_process_slots",
+      "google_apltlad",
+      "google_spfd",
+      "google_lpabyc",
+      "google_unique_id",
+      "google_sv_map",
+      "Dialogs",
+      "__core-js_shared__",
+      "feather",
+      "google_ama_state",
+      "gaplugins",
+      "gaGlobal",
+      "gaData",
+      "Goog_AdSense_getAdAdapterInstance",
+      "Goog_AdSense_OsdAdapter",
+      "google_sa_impl",
+      "google_persistent_state_async",
+      "__google_ad_urls",
+      "google_global_correlator",
+      "__google_ad_urls_id",
+      "googleToken",
+      "googleIMState",
+      "_gfp_p_",
+      "processGoogleToken",
+      "google_prev_clients",
+      "goog_pvsid",
+      "google_jobrunner",
+      "ampInaboxIframes",
+      "ampInaboxPendingMessages",
+      "goog_sdr_l",
+      "google_osd_loaded",
+      "google_onload_fired",
+      "Goog_Osd_UnloadAdBlock",
+      "Goog_Osd_UpdateElementToMeasure",
+      "google_osd_amcb",
+      "google_llp",
+      "googletag",
+      "GoogleGcLKhOms",
+      "google_image_requests",
+      "timeout",
+      "delComment",
+      "player_start",
+      "showFullScreen",
+    ],
+    addInfoBanner: [{ targetElement: "div.download_box" }],
+    modifyButtons: [
+      ["button#method_free", { customText: "Free Download" }],
+      ["button#downloadbtn", { requiresCaptcha: true }],
+      ["div.download_box > a", { replaceWithForm: true }],
+    ],
     customScript() {
-      // click the "Slow Download" option on page 1
-      this.$("button#method_free")?.click();
-      const captcha_box = this.$(".download_box div");
+      // automation
+      const captcha_box = this.$(
+        ".download_box table td > div[style]:not([class])"
+      );
       if (captcha_box) {
         const captcha_code = [...captcha_box?.children]
           .sort(
@@ -730,9 +1181,19 @@ const siteRules = {
         document.forms?.F1?.submit();
       }
 
-      this.$(".col-md-4")?.classList.replace("col-md-4", "col-md-12");
+      // aesthetics
+      this.ifElementExists(
+        "div[style*='direction:ltr']",
+        (div) => (div.style.background = "#000")
+      );
+      this.$$(".col-md-4").forEach((div) =>
+        div.classList.replace("col-md-4", "col-12")
+      );
       this.$("p.mb-5")?.classList.remove("mb-5");
-      this.addInfoBanner("#container .container .row", "beforeend");
+      this.addInfoBanner({
+        targetElement: "#container .container .row",
+        where: "beforeend",
+      });
     },
   },
   mixloads: {
@@ -759,23 +1220,79 @@ const siteRules = {
       "adsbox",
       "ul.features",
     ],
-    removeByRegex: [[".download_method", /fast download/gi]],
-    hideElements: [["table", 0]],
+    removeByRegex: [{ query: ".download_method", regex: /fast download/gi }],
+    hideElementsByDisplay: ["table"],
     removeIFrames: true,
     removeDisabledAttr: true,
-    finalDownloadElementSelector: [["div.download_box a", /Link Generated/gi]],
-    addHoverAbility: [
-      ["#downloadbtn"],
-      ["a.btn-block"],
-      ["button#method_free"],
+    destroyWindowFunctions: [
+      "setPagination",
+      "_gaq",
+      "_gat",
+      "gaGlobal",
+      "timeout",
+      "adsbygoogle",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_reactive_ads_global_state",
+      "_gfp_a_",
+      "google_sa_queue",
+      "google_sl_win",
+      "google_process_slots",
+      "google_apltlad",
+      "google_spfd",
+      "google_lpabyc",
+      "google_unique_id",
+      "google_sv_map",
+      "google_user_agent_client_hint",
+      "Goog_AdSense_getAdAdapterInstance",
+      "Goog_AdSense_OsdAdapter",
+      "google_sa_impl",
+      "google_persistent_state_async",
+      "__google_ad_urls",
+      "google_global_correlator",
+      "__google_ad_urls_id",
+      "googleToken",
+      "googleIMState",
+      "_gfp_p_",
+      "processGoogleToken",
+      "google_prev_clients",
+      "goog_pvsid",
+      "google_jobrunner",
+      "ampInaboxIframes",
+      "ampInaboxPendingMessages",
+      "goog_sdr_l",
+      "google_osd_loaded",
+      "google_onload_fired",
+      "Goog_Osd_UnloadAdBlock",
+      "Goog_Osd_UpdateElementToMeasure",
+      "google_osd_amcb",
+      "delComment",
+      "player_start",
+      "showFullScreen",
+      "__core-js_shared__",
+      "feather",
+      "google_llp",
+      "googletag",
+      "GoogleGcLKhOms",
+      "google_image_requests",
+      "jQuery19108826912945961212",
     ],
     addInfoBanner: [
-      [".download_box > a", "afterend"],
-      ["form > .container > .row", "beforeend"],
+      { targetElement: ".download_box > a", where: "afterend" },
+      { targetElement: "form > .container > .row", where: "beforeend" },
+    ],
+    modifyButtons: [
+      ["button#method_free"],
+      ["#downloadbtn", { requiresCaptcha: true }],
+      ["a.btn-block"],
     ],
     customScript() {
       // click the "Slow Download" option on page 1
-      this.$("button#method_free")?.click();
+      // this.$("button#method_free")?.click();
       this.$(".col-md-4")?.classList.replace("col-md-4", "col-md-12");
       this.$("p.mb-5")?.classList.remove("mb-5");
 
@@ -831,10 +1348,10 @@ const siteRules = {
       "#vi-smartbanner",
     ],
     removeByRegex: [
-      [".download_method", /fast download/gi],
-      [".row.pt-4.pb-5", /307200/gi],
-      ["ul", /What is DropGalaxy?/gi],
-      ["div.mt-5.text-center", /ad-free/gi],
+      { query: ".download_method", regex: /fast download/gi },
+      { query: ".row.pt-4.pb-5", regex: /307200/gi },
+      { query: "ul", regex: /What is DropGalaxy?/gi },
+      { query: "div.mt-5.text-center", regex: /ad-free/gi },
     ],
     hideElements: undefined,
     removeIFrames: true,
@@ -842,7 +1359,6 @@ const siteRules = {
     destroyWindowFunctions: [
       "__CF$cv$params",
       "absda",
-      // "go",
       "adsbygoogle",
       "_0xab85",
       "_0x4830",
@@ -860,6 +1376,117 @@ const siteRules = {
       "AaDetector",
       "LieDetector",
       "__cfBeacon",
+      "removeURLParameter",
+      "getParameterByName",
+      "updateQueryStringParameter",
+      "setPagination",
+      "colortheme",
+      "color",
+      "LAST_CORRECT_EVENT_TIME",
+      "_603968549",
+      "_1714636353",
+      "F5NN",
+      "I833",
+      "DEBUG_MODE",
+      "ENABLE_LOGS",
+      "ENABLE_ONLINE_DEBUGGER",
+      "SUPPORT_IE8",
+      "MOBILE_VERSION",
+      "EXTERNAL_POLYFILL",
+      "SEND_PIXELS",
+      "IS_POP_COIN",
+      "PIXEL_LOG_LEVEL_INFO",
+      "PIXEL_LOG_LEVEL_DEBUG",
+      "PIXEL_LOG_LEVEL_WARNING",
+      "PIXEL_LOG_LEVEL_ERROR",
+      "PIXEL_LOG_LEVEL_METRICS",
+      "p5NN",
+      "S5NN",
+      "L5NN",
+      "_392594680",
+      "_pop",
+      "_0x16f7",
+      "_0x2768",
+      "_0x2f1ac4",
+      "_0x4eaee9",
+      "_0x51da65",
+      "_0x4e2ddc",
+      "_0x4cc079",
+      "_0x5e084c",
+      "vitag",
+      "linksucess",
+      "go",
+      "delComment",
+      "player_start",
+      "pplayer",
+      "showFullScreen",
+      "_0x2bb9",
+      "_0x77be",
+      "_0x8f9e7e",
+      "_0x577d04",
+      "_0x2237cb",
+      "_0x11947",
+      "_0x41b9e0",
+      "_0x9a9b21",
+      "_VLIOBJ",
+      "fanfilnfjkdsabfhjdsbfkljsvmjhdfb",
+      "iinf",
+      "detectZoom",
+      "iframe",
+      "where",
+      "win",
+      "_pao",
+      "regeneratorRuntime",
+      "__core-js_shared__",
+      "tagApi",
+      "viAPItag",
+      "observeElementInViewport",
+      "jQuery19108284913344818186",
+      "colors",
+      "setStyleSheet",
+      "changecolor",
+      "ClipboardJS",
+      "links",
+      "vlipbChunk",
+      "vlipb",
+      "_pbjsGlobals",
+      "nobidVersion",
+      "nobid",
+      "vlPlayer",
+      "googletag",
+      "ggeac",
+      "google_js_reporting_queue",
+      "$sf",
+      "_google_rum_ns_",
+      "google_persistent_state_async",
+      "google_global_correlator",
+      "google_srt",
+      "mb",
+      "Goog_AdSense_Lidar_sendVastEvent",
+      "Goog_AdSense_Lidar_getViewability",
+      "Goog_AdSense_Lidar_getUrlSignalsArray",
+      "Goog_AdSense_Lidar_getUrlSignalsList",
+      "module$contents$ima$CompanionAdSelectionSettings_CompanionAdSelectionSettings",
+      "ima",
+      "module$contents$ima$AdsRenderingSettings_AdsRenderingSettings",
+      "module$contents$ima$AdCuePoints_AdCuePoints",
+      "module$contents$ima$AdError_AdError",
+      "module$contents$ima$AdErrorEvent_AdErrorEvent",
+      "module$contents$ima$AdEvent_AdEvent",
+      "module$contents$ima$AdsManagerLoadedEvent_AdsManagerLoadedEvent",
+      "google",
+      "$jscomp",
+      "$jscomp$lookupPolyfilledValue",
+      "AdscoreInit",
+      "pako",
+      "txt",
+      "Goog_AdSense_getAdAdapterInstance",
+      "Goog_AdSense_OsdAdapter",
+      "google_measure_js_timing",
+      "goog_pvsid",
+      "timeout",
+      "a",
+      "refS",
     ],
     finalDownloadElementSelector: [
       ["div.container.page.downloadPage > div > div.col-md-4 > a"],
@@ -868,7 +1495,13 @@ const siteRules = {
       ["div.container.page.downloadPage > div > div.col-md-4 > a"],
       ["button#dl"],
     ],
-    addInfoBanner: [[".container.page.downloadPage .row", "beforeend"]],
+    addInfoBanner: [
+      {
+        targetElement: ".container.page.downloadPage .row",
+        where: "beforeend",
+      },
+    ],
+    createCountdown: { element: ".seconds" },
     customScript() {
       this.$("body").classList.remove("white");
       this.$("body").classList.add("dark");
@@ -924,7 +1557,7 @@ const siteRules = {
             },
             referrer: "https://dropgalaxy.com/",
             referrerPolicy: "strict-origin-when-cross-origin",
-            body: "rand=&msg=91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C005004%2C9007%2C100%2C10005%2C11007%2C9007%2C114%2C100%2C005004%2C11007%2C110%2C108%2C111%2C99%2C10007%2C101%2C100%2C005004%2C118%2C101%2C114%2C115%2C105%2C111%2C110%2C9005%2C91%2C114%2C9007%2C110%2C100%2C61%2C9005%2C91%2C105%2C100%2C61%2C110%2C99%2C104%2C49%2C56%2C110%2C101%2C10007%2C101%2C51%2C100%2C49%2C9005%2C91%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C105%2C115%2C98%2C101%2C115%2C116%2C61%2C48%2C9005%2C91%2C9007%2C100%2C98%2C108%2C111%2C99%2C10007%2C95%2C100%2C101%2C116%2C101%2C99%2C116%2C101%2C100%2C61%2C49%2C9005%2C91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C104%2C9007%2C115%2C104%2C61%2C49%2C9005%2C91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C104%2C9007%2C115%2C104%2C9007%2C100%2C61%2C11007%2C110%2C100%2C101%2C10004%2C105%2C110%2C101%2C100%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C99%2C111%2C110%2C116%2C101%2C10040%2C116%2C11007%2C9007%2C108%2C46%2C109%2C101%2C100%2C105%2C9007%2C46%2C110%2C101%2C116%2C4007%2C49%2C48%2C49%2C55%2C51%2C5005%2C5004%2C51%2C5007%2C5004%2C4007%2C10004%2C99%2C109%2C9007%2C105%2C110%2C46%2C106%2C115%2C6005%2C99%2C98%2C61%2C119%2C105%2C110%2C100%2C111%2C119%2C46%2C95%2C109%2C0078%2C68%2C101%2C116%2C9007%2C105%2C108%2C115%2C46%2C105%2C110%2C105%2C116%2C65%2C100%2C0058%2C0058%2C10005%2C100%2C11004%2C114%2C61%2C48%2C0058%2C99%2C105%2C100%2C61%2C56%2C6007%2C85%2C88%2C0078%2C49%2C49%2C51%2C49%2C0058%2C99%2C11004%2C99%2C100%2C61%2C116%2C66%2C8005%2C68%2C50%2C10041%2C0071%2C6007%2C84%2C0071%2C007007%2C54%2C119%2C54%2C0070%2C65%2C11005%2C5007%2C0075%2C11004%2C55%2C10005%2C005007%2C51%2C68%2C005007%2C51%2C68%2C0058%2C99%2C114%2C105%2C100%2C61%2C49%2C50%2C54%2C49%2C48%2C5004%2C48%2C55%2C49%2C0058%2C115%2C105%2C1004004%2C101%2C61%2C51%2C48%2C48%2C10040%2C54%2C48%2C48%2C0058%2C99%2C99%2C61%2C85%2C8005%2C0058%2C115%2C99%2C61%2C007005%2C0076%2C0058%2C104%2C116%2C116%2C11004%2C115%2C61%2C49%2C0058%2C118%2C105%2C10004%2C61%2C49%2C0058%2C114%2C101%2C11005%2C11007%2C114%2C108%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C56%2C50%2C5007%2C45%2C10004%2C105%2C110%2C100%2C45%2C111%2C11007%2C116%2C45%2C119%2C104%2C9007%2C116%2C45%2C9007%2C114%2C101%2C45%2C116%2C104%2C101%2C45%2C11004%2C114%2C105%2C99%2C101%2C115%2C45%2C111%2C110%2C45%2C109%2C111%2C114%2C116%2C10005%2C9007%2C10005%2C101%2C45%2C108%2C111%2C9007%2C110%2C115%2C45%2C116%2C111%2C45%2C108%2C105%2C118%2C101%2C45%2C119%2C105%2C116%2C104%2C45%2C108%2C105%2C10004%2C101%2C46%2C104%2C116%2C109%2C108%2C0058%2C10007%2C119%2C114%2C10004%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C0058%2C110%2C115%2C101%2C61%2C5005%2C0058%2C118%2C105%2C61%2C49%2C54%2C50%2C48%2C50%2C56%2C48%2C54%2C50%2C5004%2C55%2C48%2C5005%2C5007%2C50%2C55%2C50%2C5007%2C56%2C0058%2C11007%2C10005%2C100%2C61%2C5004%2C0058%2C110%2C98%2C61%2C49%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C99%2C111%2C110%2C116%2C101%2C10040%2C116%2C11007%2C9007%2C108%2C46%2C109%2C101%2C100%2C105%2C9007%2C46%2C110%2C101%2C116%2C4007%2C49%2C48%2C49%2C55%2C51%2C5005%2C5004%2C51%2C5007%2C5004%2C4007%2C10004%2C99%2C109%2C9007%2C105%2C110%2C46%2C106%2C115%2C6005%2C99%2C98%2C61%2C119%2C105%2C110%2C100%2C111%2C119%2C46%2C95%2C109%2C0078%2C68%2C101%2C116%2C9007%2C105%2C108%2C115%2C46%2C105%2C110%2C105%2C116%2C65%2C100%2C0058%2C0058%2C10005%2C100%2C11004%2C114%2C61%2C48%2C0058%2C99%2C105%2C100%2C61%2C56%2C6007%2C85%2C88%2C0078%2C49%2C49%2C51%2C49%2C0058%2C99%2C11004%2C99%2C100%2C61%2C116%2C66%2C8005%2C68%2C50%2C10041%2C0071%2C6007%2C84%2C0071%2C007007%2C54%2C119%2C54%2C0070%2C65%2C11005%2C5007%2C0075%2C11004%2C55%2C10005%2C005007%2C51%2C68%2C005007%2C51%2C68%2C0058%2C99%2C114%2C105%2C100%2C61%2C55%2C50%2C54%2C56%2C5005%2C56%2C50%2C5005%2C48%2C0058%2C115%2C105%2C1004004%2C101%2C61%2C51%2C48%2C48%2C10040%2C5005%2C48%2C0058%2C99%2C99%2C61%2C85%2C8005%2C0058%2C115%2C99%2C61%2C007005%2C0076%2C0058%2C104%2C116%2C116%2C11004%2C115%2C61%2C49%2C0058%2C118%2C105%2C10004%2C61%2C49%2C0058%2C114%2C101%2C11005%2C11007%2C114%2C108%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C56%2C50%2C5007%2C45%2C10004%2C105%2C110%2C100%2C45%2C111%2C11007%2C116%2C45%2C119%2C104%2C9007%2C116%2C45%2C9007%2C114%2C101%2C45%2C116%2C104%2C101%2C45%2C11004%2C114%2C105%2C99%2C101%2C115%2C45%2C111%2C110%2C45%2C109%2C111%2C114%2C116%2C10005%2C9007%2C10005%2C101%2C45%2C108%2C111%2C9007%2C110%2C115%2C45%2C116%2C111%2C45%2C108%2C105%2C118%2C101%2C45%2C119%2C105%2C116%2C104%2C45%2C108%2C105%2C10004%2C101%2C46%2C104%2C116%2C109%2C108%2C0058%2C10007%2C119%2C114%2C10004%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C0058%2C110%2C115%2C101%2C61%2C5005%2C0058%2C118%2C105%2C61%2C49%2C54%2C50%2C48%2C50%2C56%2C48%2C54%2C50%2C5004%2C5005%2C49%2C49%2C5004%2C51%2C5007%2C48%2C5004%2C5004%2C0058%2C11007%2C10005%2C100%2C61%2C5004%2C0058%2C110%2C98%2C61%2C49%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C11004%2C10040%2C108%2C99%2C108%2C110%2C109%2C100%2C101%2C99%2C111%2C109%2C45%2C9007%2C46%2C9007%2C10007%2C9007%2C109%2C9007%2C105%2C104%2C100%2C46%2C110%2C101%2C116%2C4007%2C106%2C9007%2C118%2C9007%2C115%2C99%2C114%2C105%2C11004%2C116%2C115%2C4007%2C98%2C114%2C111%2C119%2C115%2C101%2C114%2C10004%2C11004%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C6005%2C116%2C101%2C109%2C11004%2C108%2C9007%2C116%2C101%2C007005%2C100%2C61%2C51%2C0058%2C99%2C11007%2C115%2C116%2C111%2C109%2C101%2C114%2C007005%2C100%2C61%2C56%2C6007%2C85%2C88%2C0078%2C49%2C49%2C51%2C49%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C119%2C119%2C119%2C46%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C116%2C9007%2C98%2C108%2C101%2C116%2C111%2C11004%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C115%2C116%2C9007%2C116%2C105%2C99%2C46%2C99%2C108%2C111%2C11007%2C100%2C10004%2C108%2C9007%2C114%2C101%2C105%2C110%2C115%2C105%2C10005%2C104%2C116%2C115%2C46%2C99%2C111%2C109%2C4007%2C98%2C101%2C9007%2C99%2C111%2C110%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C99%2C111%2C110%2C116%2C101%2C10040%2C116%2C11007%2C9007%2C108%2C46%2C109%2C101%2C100%2C105%2C9007%2C46%2C110%2C101%2C116%2C4007%2C100%2C109%2C101%2C100%2C105%2C9007%2C110%2C101%2C116%2C46%2C106%2C115%2C6005%2C99%2C105%2C100%2C61%2C56%2C6007%2C85%2C88%2C0078%2C49%2C49%2C51%2C49%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C116%2C9007%2C10005%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C118%2C49%2C4007%2C49%2C54%2C50%2C48%2C50%2C55%2C56%2C5007%2C5007%2C50%2C4007%2C56%2C5005%2C99%2C55%2C50%2C5005%2C100%2C55%2C5004%2C99%2C50%2C5007%2C54%2C10004%2C10004%2C5007%2C54%2C100%2C48%2C48%2C55%2C10004%2C5004%2C99%2C51%2C56%2C9007%2C9007%2C50%2C54%2C51%2C54%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C114%2C101%2C98%2C105%2C100%2C4007%2C100%2C101%2C10004%2C9007%2C11007%2C108%2C116%2C4007%2C11004%2C114%2C101%2C98%2C105%2C100%2C45%2C118%2C5004%2C46%2C51%2C54%2C46%2C50%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C119%2C119%2C119%2C46%2C10005%2C111%2C111%2C10005%2C108%2C101%2C116%2C9007%2C10005%2C115%2C101%2C114%2C118%2C105%2C99%2C101%2C115%2C46%2C99%2C111%2C109%2C4007%2C116%2C9007%2C10005%2C4007%2C106%2C115%2C4007%2C10005%2C11004%2C116%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C108%2C11007%2C10005%2C105%2C110%2C115%2C4007%2C118%2C108%2C80%2C108%2C9007%2C10041%2C101%2C114%2C4007%2C118%2C105%2C80%2C108%2C9007%2C10041%2C101%2C114%2C95%2C118%2C5004%2C50%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C105%2C109%2C9007%2C115%2C100%2C10007%2C46%2C10005%2C111%2C111%2C10005%2C108%2C101%2C9007%2C11004%2C105%2C115%2C46%2C99%2C111%2C109%2C4007%2C106%2C115%2C4007%2C115%2C100%2C10007%2C108%2C111%2C9007%2C100%2C101%2C114%2C4007%2C105%2C109%2C9007%2C51%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C108%2C11007%2C10005%2C105%2C110%2C115%2C4007%2C115%2C9007%2C10004%2C101%2C10004%2C114%2C9007%2C109%2C101%2C4007%2C115%2C114%2C99%2C4007%2C106%2C115%2C4007%2C115%2C10004%2C95%2C104%2C111%2C115%2C116%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C115%2C101%2C99%2C11007%2C114%2C101%2C11004%2C11007%2C98%2C9007%2C100%2C115%2C46%2C10005%2C46%2C100%2C111%2C11007%2C98%2C108%2C101%2C99%2C108%2C105%2C99%2C10007%2C46%2C110%2C101%2C116%2C4007%2C10005%2C11004%2C116%2C4007%2C11004%2C11007%2C98%2C9007%2C100%2C115%2C95%2C105%2C109%2C11004%2C108%2C95%2C50%2C48%2C50%2C49%2C48%2C5004%2C50%2C56%2C48%2C49%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C99%2C46%2C9007%2C100%2C115%2C99%2C111%2C46%2C114%2C101%2C4007%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C118%2C8004%2C0071%2C99%2C10041%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C0074%2C80%2C9007%2C110%2C65%2C0070%2C10005%2C10007%2C95%2C5005%2C105%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C69%2C66%2C98%2C48%2C11005%2C100%2C0074%2C0070%2C48%2C0079%2C8005%2C109%2C101%2C85%2C115%2C110%2C48%2C88%2C8005%2C108%2C51%2C104%2C0070%2C65%2C11007%2C007007%2C10040%2C48%2C116%2C81%2C54%2C105%2C0075%2C56%2C8004%2C10004%2C85%2C66%2C119%2C65%2C100%2C81%2C56%2C119%2C81%2C66%2C007005%2C007007%2C69%2C89%2C6007%2C007005%2C81%2C68%2C85%2C0071%2C1004004%2C106%2C110%2C5004%2C108%2C8007%2C86%2C11007%2C45%2C106%2C90%2C10004%2C98%2C49%2C89%2C109%2C118%2C10005%2C0078%2C105%2C8004%2C10004%2C10040%2C0079%2C0078%2C8005%2C111%2C110%2C101%2C45%2C89%2C108%2C110%2C007007%2C9007%2C109%2C0070%2C10005%2C11004%2C98%2C65%2C007005%2C104%2C65%2C007007%2C114%2C0078%2C65%2C0075%2C69%2C55%2C0079%2C55%2C114%2C50%2C84%2C8007%2C49%2C0070%2C49%2C65%2C10004%2C110%2C65%2C6007%2C5004%2C0071%2C55%2C10004%2C106%2C80%2C108%2C8005%2C5004%2C104%2C65%2C5004%2C10041%2C69%2C55%2C0074%2C56%2C114%2C65%2C105%2C48%2C65%2C0058%2C118%2C61%2C5004%2C0058%2C0076%2C10005%2C007005%2C8004%2C0070%2C0078%2C11007%2C119%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C007004%2C007005%2C115%2C111%2C0076%2C99%2C0075%2C0070%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C0079%2C1004004%2C007007%2C11007%2C69%2C101%2C8005%2C118%2C61%2C0058%2C69%2C98%2C007007%2C118%2C65%2C86%2C10005%2C106%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C10005%2C101%2C116%2C108%2C105%2C110%2C10007%2C005007%2C50%2C0070%2C50%2C005007%2C50%2C0070%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C118%2C8004%2C0071%2C99%2C10041%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C0074%2C80%2C9007%2C110%2C65%2C0070%2C10005%2C108%2C65%2C6007%2C54%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C0079%2C007004%2C81%2C109%2C100%2C90%2C50%2C81%2C111%2C95%2C5004%2C007004%2C68%2C11004%2C111%2C69%2C0071%2C11007%2C119%2C101%2C65%2C5004%2C0079%2C50%2C0071%2C0079%2C115%2C80%2C118%2C6007%2C10007%2C55%2C9007%2C1004004%2C86%2C108%2C007005%2C8004%2C0076%2C50%2C69%2C85%2C007005%2C119%2C81%2C66%2C007004%2C007007%2C69%2C85%2C6007%2C007005%2C007004%2C10040%2C10004%2C5007%2C11005%2C65%2C6007%2C10041%2C108%2C109%2C8004%2C10041%2C5005%2C007007%2C84%2C54%2C0075%2C10041%2C5007%2C106%2C88%2C10040%2C9007%2C51%2C11005%2C65%2C108%2C10004%2C8007%2C84%2C118%2C9007%2C111%2C56%2C007005%2C54%2C85%2C86%2C114%2C10007%2C100%2C119%2C90%2C65%2C105%2C69%2C65%2C51%2C10007%2C50%2C51%2C007004%2C007004%2C48%2C49%2C86%2C95%2C101%2C89%2C81%2C5005%2C11007%2C48%2C56%2C84%2C54%2C007007%2C86%2C106%2C0079%2C11007%2C10041%2C66%2C114%2C106%2C1004004%2C0075%2C80%2C81%2C8005%2C1004004%2C56%2C88%2C45%2C116%2C11005%2C5004%2C6007%2C69%2C115%2C0058%2C118%2C61%2C5004%2C0058%2C0076%2C10005%2C007005%2C8004%2C0070%2C0078%2C11007%2C119%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C007004%2C007005%2C115%2C111%2C0076%2C99%2C0075%2C0070%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C0079%2C1004004%2C007007%2C11007%2C69%2C101%2C8005%2C118%2C61%2C0058%2C69%2C98%2C007007%2C118%2C65%2C86%2C10005%2C106%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C10005%2C101%2C116%2C108%2C105%2C110%2C10007%2C005007%2C50%2C0070%2C50%2C005007%2C50%2C0070%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C118%2C8004%2C0071%2C99%2C10041%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C0074%2C80%2C9007%2C110%2C65%2C0070%2C10005%2C108%2C65%2C007007%2C85%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C0070%2C85%2C10007%2C10005%2C5005%2C0070%2C51%2C5007%2C55%2C80%2C101%2C1004004%2C109%2C104%2C10040%2C54%2C88%2C10007%2C007007%2C50%2C5004%2C5007%2C101%2C5004%2C88%2C5005%2C95%2C8004%2C49%2C116%2C5004%2C119%2C11007%2C68%2C11005%2C105%2C90%2C85%2C0076%2C66%2C0078%2C95%2C10040%2C119%2C81%2C66%2C007005%2C007007%2C69%2C89%2C6007%2C007005%2C81%2C68%2C5005%2C11005%2C111%2C110%2C0074%2C8007%2C111%2C115%2C66%2C86%2C98%2C11007%2C8007%2C95%2C1004004%2C84%2C0076%2C114%2C49%2C106%2C0074%2C99%2C10041%2C10007%2C101%2C90%2C111%2C55%2C50%2C66%2C10040%2C8004%2C101%2C8004%2C10041%2C5005%2C5005%2C10040%2C105%2C56%2C115%2C10040%2C65%2C007005%2C104%2C65%2C0079%2C0076%2C104%2C66%2C111%2C104%2C109%2C100%2C108%2C116%2C8007%2C10005%2C86%2C9007%2C119%2C0071%2C10041%2C69%2C98%2C10040%2C0079%2C85%2C8005%2C116%2C118%2C8005%2C104%2C54%2C100%2C8007%2C10007%2C9007%2C115%2C8007%2C11004%2C0078%2C6007%2C51%2C116%2C101%2C0071%2C0076%2C11005%2C0058%2C118%2C61%2C5004%2C0058%2C0076%2C10005%2C007005%2C8004%2C0070%2C0078%2C11007%2C119%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C007004%2C007005%2C115%2C111%2C0076%2C99%2C0075%2C0070%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C0079%2C1004004%2C007007%2C11007%2C69%2C101%2C8005%2C118%2C61%2C0058%2C69%2C98%2C007007%2C118%2C65%2C86%2C10005%2C106%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C10005%2C101%2C116%2C108%2C105%2C110%2C10007%2C005007%2C50%2C0070%2C50%2C005007%2C50%2C0070%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C118%2C8004%2C0071%2C99%2C10041%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C0074%2C80%2C9007%2C110%2C65%2C0070%2C10005%2C108%2C65%2C86%2C116%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C0070%2C007007%2C11005%2C007005%2C10004%2C10005%2C104%2C56%2C8004%2C49%2C100%2C116%2C109%2C11005%2C54%2C56%2C8004%2C10007%2C99%2C85%2C118%2C45%2C8007%2C106%2C89%2C99%2C100%2C114%2C54%2C10041%2C116%2C11004%2C007007%2C9007%2C115%2C0076%2C5004%2C108%2C45%2C8005%2C10004%2C54%2C0079%2C119%2C81%2C66%2C007004%2C007007%2C69%2C85%2C6007%2C007005%2C65%2C68%2C118%2C49%2C109%2C1004004%2C69%2C89%2C108%2C10004%2C6007%2C11007%2C10040%2C81%2C90%2C9007%2C49%2C10040%2C109%2C65%2C56%2C50%2C111%2C54%2C89%2C100%2C86%2C89%2C89%2C5005%2C6007%2C8005%2C109%2C5007%2C95%2C95%2C8004%2C48%2C66%2C90%2C114%2C5007%2C115%2C65%2C105%2C69%2C65%2C10005%2C118%2C104%2C90%2C6007%2C68%2C007005%2C56%2C111%2C106%2C9007%2C99%2C69%2C68%2C115%2C80%2C1004004%2C81%2C10041%2C0079%2C54%2C116%2C111%2C56%2C10040%2C106%2C89%2C85%2C98%2C0075%2C10040%2C114%2C116%2C88%2C101%2C81%2C10004%2C0079%2C110%2C119%2C105%2C68%2C81%2C0058%2C118%2C61%2C5004%2C0058%2C0076%2C10005%2C007005%2C8004%2C0070%2C0078%2C11007%2C119%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C007004%2C007005%2C115%2C111%2C0076%2C99%2C0075%2C0070%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C0079%2C1004004%2C007007%2C11007%2C69%2C101%2C8005%2C118%2C61%2C0058%2C69%2C98%2C007007%2C118%2C65%2C86%2C10005%2C106%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C10005%2C101%2C116%2C108%2C105%2C110%2C10007%2C005007%2C50%2C0070%2C50%2C005007%2C50%2C0070%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C118%2C8004%2C0071%2C99%2C10041%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C0074%2C80%2C9007%2C110%2C65%2C0070%2C10005%2C108%2C65%2C10004%2C0071%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C66%2C65%2C110%2C84%2C109%2C55%2C104%2C54%2C84%2C0074%2C0076%2C10005%2C90%2C101%2C11007%2C007004%2C56%2C11007%2C56%2C007005%2C84%2C45%2C69%2C10004%2C5005%2C11004%2C84%2C0078%2C104%2C89%2C50%2C119%2C119%2C99%2C45%2C81%2C110%2C101%2C95%2C85%2C10040%2C115%2C110%2C119%2C81%2C66%2C007005%2C007007%2C69%2C89%2C6007%2C007005%2C81%2C6007%2C1004004%2C007005%2C0070%2C106%2C105%2C11007%2C101%2C0074%2C110%2C115%2C0079%2C85%2C0071%2C68%2C1004004%2C51%2C80%2C86%2C5007%2C5005%2C51%2C5007%2C007007%2C105%2C85%2C50%2C104%2C89%2C81%2C114%2C0079%2C89%2C45%2C65%2C10041%2C110%2C90%2C66%2C68%2C0079%2C5005%2C84%2C81%2C007005%2C104%2C65%2C0074%2C0074%2C108%2C50%2C108%2C6007%2C105%2C119%2C66%2C69%2C1004004%2C5004%2C81%2C49%2C11007%2C54%2C108%2C108%2C9007%2C0076%2C11007%2C98%2C007004%2C65%2C9007%2C007005%2C10040%2C5005%2C95%2C99%2C50%2C101%2C54%2C0074%2C54%2C51%2C109%2C5007%2C0076%2C8005%2C5004%2C5004%2C007004%2C0058%2C118%2C61%2C5004%2C0058%2C0076%2C10005%2C007005%2C8004%2C0070%2C0078%2C11007%2C119%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C007004%2C007005%2C115%2C111%2C0076%2C99%2C0075%2C0070%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C0079%2C1004004%2C007007%2C11007%2C69%2C101%2C8005%2C118%2C61%2C0058%2C69%2C98%2C007007%2C118%2C65%2C86%2C10005%2C106%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C10005%2C101%2C116%2C108%2C105%2C110%2C10007%2C005007%2C50%2C0070%2C50%2C005007%2C50%2C0070%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C118%2C8004%2C0071%2C99%2C10041%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C0074%2C80%2C9007%2C110%2C65%2C0070%2C10005%2C108%2C65%2C111%2C10004%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C007005%2C88%2C84%2C10005%2C100%2C108%2C007004%2C5004%2C88%2C81%2C90%2C48%2C11005%2C1004004%2C007005%2C10041%2C68%2C50%2C105%2C66%2C106%2C45%2C0070%2C11007%2C11007%2C0075%2C1004004%2C10041%2C54%2C116%2C66%2C90%2C11005%2C0079%2C0071%2C007007%2C5004%2C8007%2C110%2C88%2C90%2C90%2C101%2C119%2C81%2C66%2C0071%2C007007%2C69%2C81%2C6007%2C007005%2C007004%2C55%2C11004%2C88%2C88%2C81%2C49%2C0076%2C108%2C80%2C45%2C1004004%2C51%2C007007%2C6007%2C5005%2C0078%2C118%2C56%2C65%2C101%2C0078%2C100%2C111%2C106%2C100%2C65%2C10005%2C89%2C0079%2C5004%2C66%2C0076%2C0078%2C8005%2C116%2C66%2C90%2C69%2C85%2C0074%2C106%2C11004%2C65%2C105%2C65%2C66%2C54%2C105%2C5007%2C0075%2C89%2C84%2C11007%2C10004%2C0079%2C10004%2C11005%2C007004%2C5004%2C10007%2C007004%2C110%2C66%2C116%2C98%2C106%2C48%2C51%2C109%2C11005%2C66%2C10007%2C111%2C8005%2C81%2C109%2C89%2C56%2C115%2C110%2C88%2C11004%2C5007%2C114%2C90%2C89%2C5004%2C10005%2C0058%2C118%2C61%2C5004%2C0058%2C0076%2C10005%2C007005%2C8004%2C0070%2C0078%2C11007%2C119%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C007004%2C007005%2C115%2C111%2C0076%2C99%2C0075%2C0070%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C0079%2C1004004%2C007007%2C11007%2C69%2C101%2C8005%2C118%2C61%2C0058%2C69%2C98%2C007007%2C118%2C65%2C86%2C10005%2C106%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C10005%2C101%2C116%2C108%2C105%2C110%2C10007%2C005007%2C50%2C0070%2C50%2C005007%2C50%2C0070%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C118%2C8004%2C0071%2C99%2C10041%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C0074%2C80%2C9007%2C110%2C65%2C0070%2C10005%2C108%2C65%2C10040%2C5004%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C65%2C95%2C8005%2C54%2C111%2C115%2C51%2C007007%2C8004%2C49%2C0076%2C007005%2C105%2C0078%2C116%2C11004%2C51%2C106%2C8007%2C1004004%2C11005%2C5007%2C10005%2C007005%2C95%2C45%2C0079%2C6007%2C0078%2C10007%2C51%2C11004%2C101%2C6007%2C90%2C66%2C81%2C118%2C109%2C51%2C10005%2C10040%2C89%2C119%2C81%2C66%2C0071%2C007007%2C69%2C81%2C6007%2C007005%2C6007%2C1004004%2C11004%2C99%2C111%2C81%2C104%2C10005%2C8005%2C007007%2C66%2C118%2C48%2C55%2C11007%2C10005%2C89%2C10041%2C10004%2C109%2C108%2C65%2C105%2C109%2C11005%2C110%2C007005%2C8004%2C48%2C115%2C51%2C8005%2C81%2C9007%2C111%2C65%2C119%2C115%2C98%2C5005%2C51%2C66%2C007004%2C65%2C105%2C65%2C0070%2C0076%2C9007%2C110%2C007004%2C108%2C55%2C101%2C10005%2C114%2C105%2C81%2C5004%2C48%2C0074%2C8004%2C110%2C5005%2C119%2C48%2C54%2C66%2C5005%2C56%2C5005%2C109%2C108%2C68%2C65%2C80%2C0075%2C0078%2C105%2C111%2C11007%2C5005%2C10007%2C0074%2C54%2C101%2C84%2C11005%2C119%2C0058%2C118%2C61%2C5004%2C0058%2C0076%2C10005%2C007005%2C8004%2C0070%2C0078%2C11007%2C119%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C007004%2C007005%2C115%2C111%2C0076%2C99%2C0075%2C0070%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C0079%2C1004004%2C007007%2C11007%2C69%2C101%2C8005%2C118%2C61%2C0058%2C69%2C98%2C007007%2C118%2C65%2C86%2C10005%2C106%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C10005%2C101%2C116%2C108%2C105%2C110%2C10007%2C005007%2C50%2C0070%2C50%2C005007%2C50%2C0070%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C118%2C8004%2C0071%2C99%2C10041%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C0074%2C80%2C9007%2C110%2C65%2C0070%2C10005%2C108%2C65%2C55%2C99%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C007005%2C90%2C8005%2C9007%2C0079%2C95%2C11005%2C1004004%2C0076%2C8004%2C0074%2C0076%2C50%2C89%2C85%2C98%2C5005%2C80%2C66%2C118%2C89%2C110%2C5004%2C68%2C99%2C45%2C80%2C0074%2C66%2C88%2C81%2C69%2C5004%2C50%2C54%2C56%2C48%2C68%2C10041%2C0071%2C49%2C11007%2C8005%2C119%2C81%2C66%2C0071%2C007007%2C69%2C81%2C6007%2C007005%2C0070%2C101%2C65%2C1004004%2C007005%2C10041%2C50%2C99%2C95%2C106%2C11005%2C8007%2C5004%2C69%2C8005%2C99%2C88%2C110%2C10004%2C9007%2C0079%2C007004%2C54%2C84%2C10007%2C98%2C5005%2C11004%2C118%2C81%2C11007%2C6007%2C100%2C9007%2C104%2C69%2C65%2C007004%2C5004%2C118%2C90%2C007004%2C11004%2C65%2C105%2C66%2C0071%2C81%2C11007%2C0078%2C007007%2C106%2C0074%2C007004%2C69%2C45%2C0074%2C50%2C0074%2C8005%2C115%2C0079%2C11007%2C116%2C118%2C89%2C66%2C007005%2C66%2C99%2C111%2C104%2C104%2C0078%2C45%2C1004004%2C10007%2C10041%2C66%2C0078%2C5005%2C11004%2C10007%2C118%2C45%2C007007%2C9007%2C45%2C65%2C0058%2C118%2C61%2C5004%2C0058%2C0076%2C10005%2C007005%2C8004%2C0070%2C0078%2C11007%2C119%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C007004%2C007005%2C115%2C111%2C0076%2C99%2C0075%2C0070%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C0079%2C1004004%2C007007%2C11007%2C69%2C101%2C8005%2C118%2C61%2C0058%2C69%2C98%2C007007%2C118%2C65%2C86%2C10005%2C106%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C10005%2C101%2C116%2C108%2C105%2C110%2C10007%2C005007%2C50%2C0070%2C50%2C005007%2C50%2C0070%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005",
+            body: "rand=&msg=91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C005004%2C9007%2C100%2C10005%2C11007%2C9007%2C114%2C100%2C005004%2C11007%2C110%2C108%2C111%2C99%2C10007%2C101%2C100%2C005004%2C118%2C101%2C114%2C115%2C105%2C111%2C110%2C9005%2C91%2C114%2C9007%2C110%2C100%2C61%2C9005%2C91%2C105%2C100%2C61%2C10005%2C5004%2C119%2C106%2C116%2C10005%2C10005%2C10041%2C5007%2C10040%2C5005%2C100%2C9005%2C91%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C105%2C115%2C98%2C101%2C115%2C116%2C61%2C48%2C9005%2C91%2C9007%2C100%2C98%2C108%2C111%2C99%2C10007%2C95%2C100%2C101%2C116%2C101%2C99%2C116%2C101%2C100%2C61%2C49%2C9005%2C91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C104%2C9007%2C115%2C104%2C61%2C49%2C9005%2C91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C104%2C9007%2C115%2C104%2C9007%2C100%2C61%2C11007%2C110%2C100%2C101%2C10004%2C105%2C110%2C101%2C100%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C119%2C119%2C119%2C46%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C116%2C9007%2C98%2C108%2C101%2C116%2C111%2C11004%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C115%2C116%2C9007%2C116%2C105%2C99%2C46%2C99%2C108%2C111%2C11007%2C100%2C10004%2C108%2C9007%2C114%2C101%2C105%2C110%2C115%2C105%2C10005%2C104%2C116%2C115%2C46%2C99%2C111%2C109%2C4007%2C98%2C101%2C9007%2C99%2C111%2C110%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C116%2C9007%2C10005%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C118%2C49%2C4007%2C49%2C54%2C51%2C49%2C5005%2C48%2C5005%2C55%2C56%2C5007%2C4007%2C56%2C5005%2C99%2C55%2C50%2C5005%2C100%2C55%2C5004%2C99%2C50%2C5007%2C54%2C10004%2C10004%2C5007%2C54%2C100%2C48%2C48%2C55%2C10004%2C5004%2C99%2C51%2C56%2C9007%2C9007%2C50%2C54%2C51%2C54%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C114%2C101%2C98%2C105%2C100%2C4007%2C100%2C101%2C10004%2C9007%2C11007%2C108%2C116%2C4007%2C11004%2C114%2C101%2C98%2C105%2C100%2C45%2C118%2C5005%2C46%2C49%2C50%2C46%2C48%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C119%2C119%2C119%2C46%2C10005%2C111%2C111%2C10005%2C108%2C101%2C116%2C9007%2C10005%2C115%2C101%2C114%2C118%2C105%2C99%2C101%2C115%2C46%2C99%2C111%2C109%2C4007%2C116%2C9007%2C10005%2C4007%2C106%2C115%2C4007%2C10005%2C11004%2C116%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C105%2C109%2C9007%2C115%2C100%2C10007%2C46%2C10005%2C111%2C111%2C10005%2C108%2C101%2C9007%2C11004%2C105%2C115%2C46%2C99%2C111%2C109%2C4007%2C106%2C115%2C4007%2C115%2C100%2C10007%2C108%2C111%2C9007%2C100%2C101%2C114%2C4007%2C105%2C109%2C9007%2C51%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C108%2C11007%2C10005%2C105%2C110%2C115%2C4007%2C115%2C9007%2C10004%2C101%2C10004%2C114%2C9007%2C109%2C101%2C4007%2C115%2C114%2C99%2C4007%2C106%2C115%2C4007%2C115%2C10004%2C95%2C104%2C111%2C115%2C116%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C115%2C101%2C99%2C11007%2C114%2C101%2C11004%2C11007%2C98%2C9007%2C100%2C115%2C46%2C10005%2C46%2C100%2C111%2C11007%2C98%2C108%2C101%2C99%2C108%2C105%2C99%2C10007%2C46%2C110%2C101%2C116%2C4007%2C10005%2C11004%2C116%2C4007%2C11004%2C11007%2C98%2C9007%2C100%2C115%2C95%2C105%2C109%2C11004%2C108%2C95%2C50%2C48%2C50%2C49%2C48%2C5007%2C48%2C55%2C48%2C49%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C100%2C11005%2C48%2C54%2C11007%2C5007%2C108%2C116%2C5005%2C9007%2C10007%2C114%2C50%2C46%2C99%2C108%2C111%2C11007%2C100%2C10004%2C114%2C111%2C110%2C116%2C46%2C110%2C101%2C116%2C4007%2C0076%2C99%2C8007%2C8004%2C108%2C90%2C10007%2C8004%2C0079%2C69%2C65%2C119%2C6007%2C101%2C85%2C104%2C86%2C85%2C86%2C5005%2C51%2C8004%2C119%2C005007%2C51%2C68%2C005007%2C51%2C68%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C99%2C46%2C9007%2C100%2C115%2C99%2C111%2C46%2C114%2C101%2C4007%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C108%2C8005%2C0079%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C84%2C54%2C8007%2C84%2C65%2C0070%2C104%2C80%2C115%2C45%2C86%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C0071%2C90%2C104%2C50%2C51%2C10041%2C10040%2C106%2C56%2C10007%2C81%2C10007%2C84%2C48%2C0078%2C85%2C8005%2C84%2C0071%2C007007%2C5004%2C51%2C105%2C66%2C51%2C95%2C0070%2C007004%2C11007%2C95%2C65%2C55%2C99%2C9007%2C11004%2C0071%2C0076%2C5004%2C98%2C99%2C99%2C10007%2C81%2C119%2C81%2C66%2C0071%2C007007%2C69%2C81%2C6007%2C007005%2C65%2C11005%2C118%2C110%2C68%2C98%2C115%2C9007%2C56%2C10004%2C0078%2C104%2C84%2C115%2C0079%2C48%2C51%2C0075%2C116%2C99%2C116%2C111%2C10007%2C10005%2C007005%2C007004%2C0078%2C1004004%2C11004%2C11007%2C54%2C100%2C0070%2C89%2C68%2C007007%2C84%2C0076%2C66%2C9007%2C119%2C99%2C0079%2C65%2C105%2C65%2C10041%2C007007%2C95%2C56%2C5007%2C0070%2C007004%2C51%2C9007%2C10005%2C6007%2C007007%2C0079%2C86%2C101%2C110%2C5005%2C10005%2C114%2C10005%2C9007%2C007004%2C65%2C8007%2C99%2C45%2C0074%2C0074%2C10041%2C0076%2C50%2C10005%2C109%2C6007%2C86%2C1004004%2C114%2C007004%2C104%2C88%2C116%2C66%2C10005%2C0058%2C118%2C61%2C5004%2C0058%2C90%2C110%2C8004%2C10005%2C69%2C84%2C10040%2C007005%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C101%2C11004%2C99%2C104%2C8007%2C0078%2C11005%2C0074%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C114%2C109%2C0075%2C106%2C110%2C115%2C007004%2C0079%2C61%2C0058%2C66%2C0070%2C0074%2C007004%2C007007%2C115%2C116%2C10007%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C56%2C50%2C55%2C45%2C119%2C104%2C9007%2C116%2C45%2C105%2C115%2C45%2C105%2C110%2C115%2C11007%2C114%2C9007%2C110%2C99%2C101%2C45%2C99%2C111%2C118%2C101%2C114%2C9007%2C10005%2C101%2C46%2C104%2C116%2C109%2C108%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C0",
             method: "POST",
             mode: "cors",
             credentials: "omit",
@@ -982,10 +1615,10 @@ const siteRules = {
       "input[name='method_premium']",
     ],
     removeByRegex: [
-      ["div.row", /about file upload/gi],
-      ["center", /ads/gi],
-      [".container > .page-wrap > .text-center", /ads/gi],
-      ["form .row", /VirusTotal scan/gi],
+      { query: "div.row", regex: /about file upload/gi },
+      { query: "center", regex: /ads/gi },
+      { query: ".container > .page-wrap > .text-center", regex: /ads/gi },
+      { query: "form .row", regex: /VirusTotal scan/gi },
     ],
     hideElements: undefined,
     removeIFrames: true,
@@ -1037,7 +1670,7 @@ const siteRules = {
     finalDownloadElementSelector: [["#download-div > a#download-btn"]],
     addHoverAbility: [],
     addInfoBanner: [],
-    createCountdown: ".seconds",
+    createCountdown: { element: ".seconds" },
     customScript() {
       // click the "Free Download" option on page 1
       this.waitUntilSelector("input[name='method_free']").then((btn) => {
@@ -1052,13 +1685,13 @@ const siteRules = {
           "beforeend",
           `<button type="submit" value="Submit" class="ss-btn">Create Download Link</button>`
         );
-        this.addInfoBanner(".ss-btn", "afterend");
+        this.addInfoBanner({ targetElement: ".ss-btn", where: "afterend" });
         this.addHoverAbility([".ss-btn"], true);
       });
 
       // add listener with delay due to issues
       this.waitUntilGlobalVariable("grecaptcha").then(() => {
-        this.addGoogleRecaptchaListener(
+        this.addCaptchaListener(
           document.F1,
           +document.querySelector(".seconds").innerText || 30
         );
@@ -1073,7 +1706,7 @@ const siteRules = {
           `.ss-btn{background-color:#44c767;border-radius:28px;border:1px solid #18ab29;display:inline-block;cursor:pointer;color:#fff;font-family:Arial;font-size:17px;font-weight:700;padding:12px 64px;text-decoration:none;text-shadow:0 1px 0 #2f6627}.ss-btn:hover{background-color:#5cbf2a}.ss-btn:active{position:relative;top:1px}`
         );
         parent.innerHTML = `<a class="ss-btn" href="${dl_link}">Download</button>`;
-        this.addInfoBanner(".ss-btn", "afterend");
+        this.addInfoBanner({ targetElement: ".ss-btn", where: "afterend" });
         this.origSetTimeout(() => {
           this.addHoverAbility([".ss-btn"], false);
         }, 1000);
@@ -1082,7 +1715,7 @@ const siteRules = {
   },
   "up-load.io": {
     host: ["up-load.io"],
-    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}div.filepanel.lft,div.info,.dfilename{background:#212121!important;color:#dfdfdf!important}#downloadbtn{padding:20px 50px!important}.dfile .report,#s65c,body > span,#comments{display:none!important}`,
+    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}div.filepanel.lft,div.info,.dfilename{background:#212121!important;color:#dfdfdf!important}#downloadbtn{padding:20px 50px!important}.dfile .report,#s65c,body > span,#comments{display:none!important}#container > div > li{color:#121212}.fileInfo .download-button{width:unset;vertical-align:unset;line-height:unset;}.fileInfo,.seconds{background:#212121!important;}`,
     downloadPageCheckBySelector: [
       "input[name='method_free']",
       "button#downloadbtn",
@@ -1090,19 +1723,26 @@ const siteRules = {
     ],
     downloadPageCheckByRegex: [/create your link/gi, /for your IP next 24/gi],
     remove: [
+      "#gdpr-cookie-notice",
       "nav",
+      "footer",
+      ".footer-sub",
+      "form[name='F1'] a[href*='premium']",
+      "input[name='method_premium']",
+      "br",
+      "div[align='left'] > li",
+      "#container > div > li > div.col-md-12.pt20 > center:nth-child(2) > center",
+      "[id*='adpays']",
       "body > span",
       "#container > div.container.download_page.pt30 > div > div.col-md-8",
-      "footer",
-      "div.footer-sub",
-      "#gdpr-cookie-notice",
       "#commonId > a",
       "div.filepanel.lft > div.share",
       "#container > div > div.col-md-12.text-center > form > div",
       "#container > div > div.col-md-12.pt20 > center > center",
       "#container > div > div > div.container.download_page.pt30 > div > div.col-md-8 li",
+      ".ads",
     ],
-    removeByRegex: [["style", /#s65c ~ \*/gi]],
+    removeByRegex: [{ query: "style", regex: /#s65c ~ \*/gi }],
     hideElements: undefined,
     removeIFrames: true,
     removeDisabledAttr: false,
@@ -1161,24 +1801,168 @@ const siteRules = {
       "_0x3693",
       "_0x196a1559e34586fdb",
       "01rt97ea5ojs",
+      "_Hasync",
+      "a",
+      "b",
+      "network",
+      "_0xc3bd",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_reactive_ads_global_state",
+      "_gfp_a_",
+      "google_user_agent_client_hint",
+      "biz",
+      "random",
+      "referr",
+      "chfh",
+      "chfh2",
+      "_HST_cntval",
+      "Histats",
+      "node",
+      "LAST_CORRECT_EVENT_TIME",
+      "_3399814740",
+      "___FONT_AWESOME___",
+      "FontAwesomeConfig",
+      "FontAwesome",
+      "_HistatsCounterGraphics_0_setValues",
+      "adcode_count",
+      "post_sticky_handler",
+      "post_noads_handler",
+      "post_trackdata_handler",
+      "post_skin_handler",
+      "post_expandable_handler",
+      "post_pop_handler",
+      "post_interstitial_handler",
+      "post_native_handler",
+      "native_resize_handler",
+      "post_iframe_handler",
+      "ItemDataScript_parameter",
+      "ItemDataScript_parameter_new",
+      "ItemDataScript_parameter_seperate",
+      "aduid",
+      "pid",
+      "width",
+      "height",
+      "displaytype",
+      "responsive",
+      "block_id",
+      "adSectionWidth",
+      "page_meta_data",
+      "page_title",
+      "page_referrer",
+      "meta_description",
+      "meta_keywords",
+      "search_keywords",
+      "currently_rendered",
+      "currently_rendered_flag",
+      "currently_rendered_adunit",
+      "cpc_impression",
+      "cpm_impression",
+      "cpa_impression",
+      "cpd_impression",
+      "cpv_impression",
+      "html_impression",
+      "ret",
+      "iframe_src",
+      "iinf",
+      "cv",
+      "char",
+      "Tynt",
+      "_dtspv",
+      "__connect",
+      "_33Across",
+      "__uspapi",
+      "__underground",
+      "vglnk",
+      "__v5k",
+      "vl_cB",
+      "vl_disable",
+      "vglnk_16317554785726",
+      "vglnk_16317554785737",
+      "s",
+      "urlorigin",
+      "responsedata",
+      "cookie_content_value",
+      "cookie_content_data",
     ],
     finalDownloadElementSelector: [["div.download-button > a.btn.btn-dow"]],
     addHoverAbility: [
       ["button#downloadbtn", true],
       ["div.download-button > a.btn.btn-dow", false],
     ],
-    addInfoBanner: [["#container > div.container"]],
+    addInfoBanner: [
+      { targetElement: "#container > div.container", where: "afterend" },
+    ],
+    modifyButtons: [
+      [
+        "input#method_free",
+        {
+          style: "",
+          replaceWithTag: "button",
+          customText: "Free Download",
+          moveTo: { position: "beforeend", target: "form[action='']" },
+        },
+      ],
+      [
+        "button#downloadbtn",
+        { style: "", makeListener: true, requiresCaptcha: true },
+      ],
+    ],
+    createCountdown: { element: ".seconds" },
     customScript() {
       // click the "Free Download" option on page 1
-      this.$("input[name='method_free']")?.click();
+      // this.$("input[name='method_free']")?.click();
 
       // add listener
-      this.addGoogleRecaptchaListener(
+      this.addCaptchaListener(
         document.F1,
-        +this.$(".seconds").innerText || 30
+        +this.$(".seconds")?.innerText || 30
       );
-
-      this.waitUntilSelector("#s65c").then((element) => element.remove());
+      this.waitUntilSelector(".download-button > a").then((btn) => {
+        const parent = btn.parentElement;
+        parent.replaceChild(
+          this.makeSafeForm({ actionURL: btn.href, method: "GET" }),
+          btn
+        );
+      });
+    },
+  },
+  katflys: {
+    host: ["short.katflys.com"],
+    customStyle: `html,body,.box{background:#121212!important;color:#dfdfdf!important}#container > div > li{color:#121212}`,
+    downloadPageCheckBySelector: ["form[name='F1']"],
+    downloadPageCheckByRegex: [],
+    remove: [
+      "#gdpr-cookie-notice",
+      "nav",
+      "footer",
+      ".footer-sub",
+      "form[name='F1'] a[href*='premium']",
+      "br",
+      "div[align='left'] > li",
+      "#container > div > li > div.col-md-12.pt20 > center:nth-child(2) > center",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [],
+    finalDownloadElementSelector: [],
+    addHoverAbility: [],
+    addInfoBanner: [],
+    createCountdown: {},
+    modifyButtons: [
+      [
+        "input[name='go']",
+        { style: "", replaceWithTag: "button", customText: "Free Download" },
+      ],
+    ],
+    customScript() {
+      // this.$(".ss-btn-ready")?.click();
     },
   },
   uploadrar: {
@@ -1206,9 +1990,12 @@ const siteRules = {
       ".banner2",
       ".banner3",
       ".report",
+      "a.btn.btn-info.btn-lg",
+      ".adsbygoogle",
+      "#countdown", // countdown doesn't matter
+      "form > div > div.col-xs-12.col-sm-12.col-md-8.col-lg-8",
     ],
-    removeByRegex: [[".txt", /uploadrar|Cloud computing/gi]],
-    hideElements: undefined,
+    removeByRegex: [{ query: ".txt", regex: /uploadrar|Cloud computing/gi }],
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
@@ -1224,15 +2011,49 @@ const siteRules = {
       "adsbygoogle",
       "cookiesAgree",
       "zfgformats",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_reactive_ads_global_state",
+      "google_user_agent_client_hint",
+      "kAWgyOxXhTis",
+      "vRowKfzUKP",
+      "cIuqJzgWhJ",
+      "JhOjFdIupR",
+      "ZWTPEQZYhZ",
+      "kRBeOhzLuY",
+      "oAAUBciJwG",
+      "CWSTRhNQZH",
+      "c2",
+      "c1",
+      "I5XCBfeVDZKA",
+      "RbntPCrNXp",
+      "timeout",
+      "relocate_home",
+      "delComment",
+      "player_start",
+      "showFullScreen",
+      "_gfp_a_",
     ],
-    finalDownloadElementSelector: [["#direct_link a"]],
-    addHoverAbility: undefined,
-    addInfoBanner: undefined,
+    // finalDownloadElementSelector: [["#direct_link a"]],
+    addInfoBanner: [],
+    modifyButtons: [
+      ["input[name='method_free']"],
+      ["#downloadbtn", { props: { type: "submit" } }],
+      ["#direct_link a", { replaceWithForm: true }],
+    ],
     customScript() {
+      this.ifElementExists(
+        "form > div > div.col-xs-12.col-sm-12.col-md-4.col-lg-4",
+        (div) => (div.className = "col-12")
+      );
       // Automation
-      this.$("input[name='method_free']")?.click();
+      // this.$("input[name='method_free']")?.click();
       this.$("#downloadbtn")?.click();
-      document.forms.F1?.submit();
+      // document.forms.F1?.submit();
     },
   },
   mega4up: {
@@ -1262,15 +2083,20 @@ const siteRules = {
       "div.my-3.text-center",
     ],
     removeByRegex: [
-      [".container div.card div.card-body", /Mega4up is one of the best/gi],
-      [
-        "body > div.subpage-content > div > div.card > div > div.row.mb-3",
-        /report abuse/gi,
-      ],
-      [
-        "body > div.subpage-content > div > div.card.mb-4 > div > div > div.col-xl-8",
-        /Download Link/gi,
-      ],
+      {
+        query: ".container div.card div.card-body",
+        regex: /Mega4up is one of the best/gi,
+      },
+      {
+        query:
+          "body > div.subpage-content > div > div.card > div > div.row.mb-3",
+        regex: /report abuse/gi,
+      },
+      {
+        query:
+          "body > div.subpage-content > div > div.card.mb-4 > div > div > div.col-xl-8",
+        regex: /Download Link/gi,
+      },
     ],
     hideElements: undefined,
     removeIFrames: true,
@@ -1324,8 +2150,11 @@ const siteRules = {
       ["button#downloadbtn", true],
       ["#direct_link > a", false],
     ],
-    addInfoBanner: [["form[name='F1']"], ["#direct_link"]],
-    createCountdown: ".seconds",
+    addInfoBanner: [
+      { targetElement: "form[name='F1']" },
+      { targetElement: "#direct_link" },
+    ],
+    createCountdown: { element: ".seconds" },
     customScript() {
       // click the "Free Download" option on page 1
       this.$("input[name='mega_free']")?.click();
@@ -1335,10 +2164,7 @@ const siteRules = {
       );
 
       // add listener
-      this.addGoogleRecaptchaListener(
-        document.F1,
-        +this.$(".seconds").innerText || 30
-      );
+      this.addCaptchaListener(document.F1, +this.$(".seconds").innerText || 30);
 
       this.ifElementExists(
         "div.card.mb-4 > div.card-body > div.row > div.col-xl-4",
@@ -1360,7 +2186,7 @@ const siteRules = {
       /Download link generated/gi,
     ],
     remove: ["nav", "#st_gdpr_iframe", "#banner_ad", "footer", "div.report"],
-    removeByRegex: [[".aboutFile", /UserFree/gi]],
+    removeByRegex: [{ query: ".aboutFile", regex: /UserFree/gi }],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
@@ -1474,10 +2300,12 @@ const siteRules = {
       ["form a[type='button']", /download now|userupload.in:183/gi],
     ],
     addHoverAbility: [["form a[type='button']"], ["button#downloadbtn"]],
-    addInfoBanner: [["form[name='F1'] .row", "beforeend"]],
-    createCountdown: ".seconds",
+    addInfoBanner: [
+      { targetElement: "form[name='F1'] .row", where: "beforeend" },
+    ],
+    createCountdown: { element: ".seconds" },
     customScript() {
-      this.addGoogleRecaptchaListener(
+      this.addCaptchaListener(
         document.forms.F1,
         +this.$(".seconds").innerText || 5
       );
@@ -1508,13 +2336,15 @@ const siteRules = {
       ["button#downloadbtn", true],
       ["form a.btn.btn-primary.btn-block", false],
     ],
-    addInfoBanner: undefined,
+    addInfoBanner: [],
     customScript() {
       // add listener
-      this.addGoogleRecaptchaListener(document.F1);
+      this.addCaptchaListener(document.F1);
 
       this.ifElementExists("form[name='F1']", () => {
-        this.addInfoBanner(this.$("form[name='F1']")?.parentElement);
+        this.addInfoBanner({
+          targetElement: this.$("form[name='F1']")?.parentElement,
+        });
       });
     },
   },
@@ -1548,13 +2378,15 @@ const siteRules = {
         true,
       ],
     ],
-    addInfoBanner: undefined,
+    addInfoBanner: [],
     customScript() {
       // add listener
-      this.addGoogleRecaptchaListener(document.forms.captchaform);
+      this.addCaptchaListener(document.forms.captchaform);
 
       this.ifElementExists("form#captchaform", () => {
-        this.addInfoBanner(this.$("form#captchaform")?.parentElement);
+        this.addInfoBanner({
+          targetElement: this.$("form#captchaform")?.parentElement,
+        });
       });
 
       // the ending direct download link
@@ -1624,7 +2456,7 @@ const siteRules = {
     ],
     finalDownloadElementSelector: [["#dlink"]],
     addHoverAbility: undefined,
-    addInfoBanner: undefined,
+    addInfoBanner: [],
     customScript() {
       this.$("#freebtn")?.click();
       if (!window.grecaptcha) {
@@ -1633,7 +2465,7 @@ const siteRules = {
       this.$("#dlink")?.click();
 
       // add listener
-      this.addGoogleRecaptchaListener(document.forms.F1);
+      this.addCaptchaListener(document.forms.F1);
     },
   },
   "upload-4ever": {
@@ -1650,10 +2482,10 @@ const siteRules = {
     ],
     remove: ["nav", "#gdpr-cookie-notice", "footer"],
     removeByRegex: [
-      [
-        "div.col-sm-12.content-section.text-center.mb-5",
-        /upgrade your account to a Premium account/gi,
-      ],
+      {
+        query: "div.col-sm-12.content-section.text-center.mb-5",
+        regex: /upgrade your account to a Premium account/gi,
+      },
     ],
     hideElements: undefined,
     removeIFrames: false,
@@ -1721,10 +2553,10 @@ const siteRules = {
       ["a#downLoadLinkButton", false],
     ],
     addInfoBanner: [
-      ["div.rightcol div#commonId", "beforeend"],
-      ["a#downLoadLinkButton", "afterend"],
+      { targetElement: "div.rightcol div#commonId", where: "beforeend" },
+      { targetElement: "a#downLoadLinkButton", where: "afterend" },
     ],
-    createCountdown: ".seconds",
+    createCountdown: { element: ".seconds" },
     customScript() {
       this.ifElementExists("#downloadbtn", () => {
         this.$("#downloadbtn").classList.replace("btn-sm", "btn-lg");
@@ -1732,7 +2564,7 @@ const siteRules = {
 
       // Automation
       this.$("input[name='method_free']")?.click();
-      this.addGoogleRecaptchaListener(document.forms.F1, 35);
+      this.addCaptchaListener(document.forms.F1, 35);
       this.waitUntilSelector("#downLoadLinkButton").then((link) => {
         this.logDebug(link.getAttribute("onclick"));
         // Remove nasty ad redirect
@@ -1871,8 +2703,8 @@ const siteRules = {
     ],
     finalDownloadElementSelector: [["#direct_link a.directl"]],
     addHoverAbility: [["#downloadbtn", true], ["#direct_link a.directl"]],
-    addInfoBanner: [[".mngez_download1", "beforeend"]],
-    createCountdown: ".seconds",
+    addInfoBanner: [{ targetElement: ".mngez_download1", where: "beforeend" }],
+    createCountdown: { element: ".seconds" },
     customScript() {
       this.origSetTimeout(() => {
         this.waitUntilSelector("input[name='method_free']").then((btn) =>
@@ -1881,7 +2713,7 @@ const siteRules = {
       }, 1000);
       // this page is slow for some reason so we have to delay
       this.waitUntilGlobalVariable("grecaptcha").then(() => {
-        this.addGoogleRecaptchaListener(document.forms.F1, 20);
+        this.addCaptchaListener(document.forms.F1, 20);
       });
     },
   },
@@ -1896,7 +2728,7 @@ const siteRules = {
       /download should automatically begin in a few seconds/gi,
     ],
     remove: ["nav", ".sharetabs", "footer", "#features"],
-    removeByRegex: [[".file-info", /About APKadmin.com/gi]],
+    removeByRegex: [{ query: ".file-info", regex: /About APKadmin.com/gi }],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
@@ -2003,148 +2835,163 @@ const siteRules = {
     ],
     finalDownloadElementSelector: [],
     addHoverAbility: undefined,
-    addInfoBanner: undefined,
+    addInfoBanner: [],
     customScript() {
       this.$("#downloadbtn")?.click();
     },
   },
   dlupload: {
     host: ["khabarbabal.online", "dlsharefile.com", "dlsharefile.org"],
-    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}.bg-secondary,.bg-white,.card,.icon,.label-group,.subpage-content{background:#121212!important}#show-submit-btn,.border.bg-secondary .bg-white.border-0,.col-lg-12.text-center,.row.justify-content-center>a[href],.separator,.text-lg-center.btn-wrapper,center,h5.mb-0{display:none!important}.d-none{display:block!important}.h1,.h2,.h3,.h4,.h5,.h6,h1,h2,h3,h4,h5,h6{color:#dfdfdf!important}.container-1{unset:hidden!important}form#DownloadForm{display:flex;flex-direction:column;align-items:center}`,
+    // customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}.bg-secondary,.bg-white,.card,.icon,.label-group,.subpage-content{background:#121212!important}#show-submit-btn,.border.bg-secondary .bg-white.border-0,.col-lg-12.text-center,.row.justify-content-center>a[href],.separator,.text-lg-center.btn-wrapper,center,h5.mb-0{display:none!important}.d-none{display:block!important}.h1,.h2,.h3,.h4,.h5,.h6,h1,h2,h3,h4,h5,h6{color:#dfdfdf!important}.container-1{unset:hidden!important}form#DownloadForm{display:flex;flex-direction:column;align-items:center}`,
+    customStyle: `body,html{background:#121212!important;color:#dfdfdf!important}form#DownloadForm{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}`,
     downloadPageCheckBySelector: ["a.downloadb"],
     downloadPageCheckByRegex: [/free download/gi],
     remove: [
-      "header",
-      "footer",
-      ".adsbygoogle",
-      "center",
-      ".shape.shape-style-1",
-      "div.separator.separator-bottom.separator-skew",
-      ".border.bg-secondary",
-      "br",
-      ".text-center > .row.justify-content-center > a",
+      "body > *",
+      // "header",
+      // "footer",
+      // ".adsbygoogle",
+      // "center",
+      // ".shape.shape-style-1",
+      // "div.separator.separator-bottom.separator-skew",
+      // ".border.bg-secondary",
+      // "br",
+      // ".text-center > .row.justify-content-center > a",
     ],
     removeByRegex: [
-      [".row.mx-auto", /DLUpload is a secure/gi],
-      [".col-lg-12.text-center", /Safe & Secure/gi],
-      [".col-lg-12.text-center", /wait for 14 seconds and click/gi],
-      ["div.card-header.border-0", /Start Your /gi],
+      { query: ".row.mx-auto", regex: /DLUpload is a secure/gi },
+      { query: ".col-lg-12.text-center", regex: /Safe & Secure/gi },
+      {
+        query: ".col-lg-12.text-center",
+        regex: /wait for 14 seconds and click/gi,
+      },
+      { query: "div.card-header.border-0", regex: /Start Your /gi },
     ],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      // "ethereum",
-      // "gtag",
-      // "dataLayer",
-      // "adsbygoogle",
-      // "google_tag_manager",
-      // "google_js_reporting_queue",
-      // "google_srt",
-      // "google_logging_queue",
-      // "google_ad_modifications",
-      // "ggeac",
-      // "google_measure_js_timing",
-      // "google_reactive_ads_global_state",
-      // "_gfp_a_",
-      // "google_sa_queue",
-      // "google_sl_win",
-      // "google_process_slots",
-      // "google_spfd",
-      // "google_unique_id",
-      // "google_sv_map",
-      // "google_lpabyc",
-      // "google_user_agent_client_hint",
-      // "google_tag_data",
-      // "gaGlobal",
-      // "Goog_AdSense_getAdAdapterInstance",
-      // "Goog_AdSense_OsdAdapter",
-      // "google_sa_impl",
-      // "google_persistent_state_async",
-      // "__google_ad_urls",
-      // "google_global_correlator",
-      // "__google_ad_urls_id",
-      // "googleToken",
-      // "googleIMState",
-      // "_gfp_p_",
-      // "processGoogleToken",
-      // "google_prev_clients",
-      // "goog_pvsid",
-      // "google_jobrunner",
-      // "ampInaboxIframes",
-      // "ampInaboxPendingMessages",
-      // "goog_sdr_l",
-      // "google_osd_loaded",
-      // "google_onload_fired",
-      // "Goog_Osd_UnloadAdBlock",
-      // "Goog_Osd_UpdateElementToMeasure",
-      // "google_osd_amcb",
-      // "$insertQueue7cbd83f132f5$",
-      // "1bgbb027-3b87-ae67-26ar-hz150f600z16",
-      // "RedirectCookies",
-      // "filename",
-      // "extension",
-      // "d",
-      // "urlsArray",
-      // "randomNumber",
-      // "currentImageUrl",
-      // "yxhpa",
-      // "yxhpb",
-      // "yxhpo",
-      // "yllixNetworkLoader",
-      // "Headroom",
-      // "process_430610",
-      // "_0x4ab4",
-      // "_0x4f3e",
-      // "sbslms",
-      // "process_430474",
-      // "closure_lm_259947",
-      // "onYouTubeIframeAPIReady",
-      // "$insert7cbd83f132f5$",
-      // "closure_lm_94135",
-      // "_0xa5ec",
-      // "_0x4b20",
-      // "_0x42f0b5",
-      // "mm",
-      // "rp",
-      // "LieDetector",
-      // "AaDetector",
-      // "placementKey",
-      // "_0xa6ab",
-      // "_0x41de",
-      // "googletag",
-      // "GoogleGcLKhOms",
-      // "google_image_requests",
-      // "DownloadLink",
-      // "GotoLink",
-      // "_0x28f6",
-      // "_0x3693",
-      // "_0x196a1559e34586fdb",
-      // "ImpressionCookies",
-      // "d1",
-      // "urlsArray1",
-      // "randomNumber1",
-      // "currentImageUrl1",
+      "ethereum",
+      "gtag",
+      "dataLayer",
+      "adsbygoogle",
+      "google_tag_manager",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_reactive_ads_global_state",
+      "_gfp_a_",
+      "google_sa_queue",
+      "google_sl_win",
+      "google_process_slots",
+      "google_spfd",
+      "google_unique_id",
+      "google_sv_map",
+      "google_lpabyc",
+      "google_user_agent_client_hint",
+      "google_tag_data",
+      "gaGlobal",
+      "Goog_AdSense_getAdAdapterInstance",
+      "Goog_AdSense_OsdAdapter",
+      "google_sa_impl",
+      "google_persistent_state_async",
+      "__google_ad_urls",
+      "google_global_correlator",
+      "__google_ad_urls_id",
+      "googleToken",
+      "googleIMState",
+      "_gfp_p_",
+      "processGoogleToken",
+      "google_prev_clients",
+      "goog_pvsid",
+      "google_jobrunner",
+      "ampInaboxIframes",
+      "ampInaboxPendingMessages",
+      "goog_sdr_l",
+      "google_osd_loaded",
+      "google_onload_fired",
+      "Goog_Osd_UnloadAdBlock",
+      "Goog_Osd_UpdateElementToMeasure",
+      "google_osd_amcb",
+      "$insertQueue7cbd83f132f5$",
+      "1bgbb027-3b87-ae67-26ar-hz150f600z16",
+      "RedirectCookies",
+      "filename",
+      "extension",
+      "d",
+      "urlsArray",
+      "randomNumber",
+      "currentImageUrl",
+      "yxhpa",
+      "yxhpb",
+      "yxhpo",
+      "yllixNetworkLoader",
+      "Headroom",
+      "process_430610",
+      "_0x4ab4",
+      "_0x4f3e",
+      "sbslms",
+      "process_430474",
+      "closure_lm_259947",
+      "onYouTubeIframeAPIReady",
+      "$insert7cbd83f132f5$",
+      "closure_lm_94135",
+      "_0xa5ec",
+      "_0x4b20",
+      "_0x42f0b5",
+      "mm",
+      "rp",
+      "LieDetector",
+      "AaDetector",
+      "placementKey",
+      "_0xa6ab",
+      "_0x41de",
+      "googletag",
+      "GoogleGcLKhOms",
+      "google_image_requests",
+      "DownloadLink",
+      "GotoLink",
+      "_0x28f6",
+      "_0x3693",
+      "_0x196a1559e34586fdb",
+      "ImpressionCookies",
+      "d1",
+      "urlsArray1",
+      "randomNumber1",
+      "currentImageUrl1",
     ],
     finalDownloadElementSelector: [],
-    addHoverAbility: undefined,
-    addInfoBanner: undefined,
+    addHoverAbility: [["#Submit", true]],
+    addInfoBanner: [{ targetElement: "#DownloadForm", where: "beforeend" }],
     customScript() {
+      // the magic cookie that allows the direct download
+      this.document.cookie = `RedirectCookies=FilePage3;path=/`;
+      // create custom form used to submit for direct download
       this.$("body").insertAdjacentHTML(
         "afterbegin",
         `<form id="DownloadForm" action="/Download/FilePage5" method="post">
       <input type="hidden" name="FileId" value="NmU1ZDRhOTYt">
-      <input type="hidden" name="ContinentName" value="">
-      <input type="hidden" name="CountryName" value="">
-      <input type="hidden" name="CityName" value="">
-      <button class="btn btn-lg btn-facebook  d-none" type="submit" id="Submit">Start Download</button>`
+      <button class="btn btn-lg btn-facebook" type="submit" id="Submit">Start Download</button>`
       );
+      this.addHoverAbility(["#Submit"], true);
+      this.addInfoBanner({
+        targetElement: "#DownloadForm",
+        where: "beforeend",
+      });
+      // manually create Google ReCAPTCHA for direct download
       this.createGoogleRecaptcha(
         "#DownloadForm",
         "6LdyluwUAAAAAI5AMDQTg4_9LFoNbrJub0IsdU3p",
         "afterbegin"
       );
+      this.waitUntilGlobalVariable("grecaptcha").then(() => {
+        this.addCaptchaListener("#DownloadForm", 0);
+      });
       return;
+      // rest of this was used before finding the workaround
       this.waitUntilSelector("a#downloadb").then((btn) => {
         btn?.click();
       });
@@ -2164,7 +3011,7 @@ const siteRules = {
         btn?.click();
       });
       this.waitUntilSelector("form#DownloadForm").then(() => {
-        this.addGoogleRecaptchaListener("form#DownloadForm").then(() => {
+        this.addCaptchaListener("form#DownloadForm").then(() => {
           this.$("#Submit")?.addEventListener(
             "click",
             function () {
@@ -2190,7 +3037,7 @@ const siteRules = {
       ".page-footer",
       "iframe[src*='ads']",
     ],
-    removeByRegex: [[".row", /What is file4net/gi]],
+    removeByRegex: [{ query: ".row", regex: /What is file4net/gi }],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
@@ -2311,8 +3158,8 @@ const siteRules = {
       [".div2 a[href^='down']", false],
     ],
     addInfoBanner: [
-      ["form[name='myform']", "beforeend"],
-      [".div2 a[href^='down']", "afterend"],
+      { targetElement: "form[name='myform']", where: "beforeend" },
+      { targetElement: ".div2 a[href^='down']", where: "afterend" },
     ],
     customScript() {
       this.waitUntilGlobalVariable("grecaptcha").then(() => {
@@ -2321,7 +3168,7 @@ const siteRules = {
           "afterbegin",
           `<input type="hidden" name="sub" value="Continue">`
         );
-        this.addGoogleRecaptchaListener(form);
+        this.addCaptchaListener(form);
       });
       this.waitUntilSelector(".div1").then(
         (div) => (div.style.display = "none")
@@ -2635,8 +3482,8 @@ const siteRules = {
     finalDownloadElementSelector: [["a[href*='.dailyuploads.net']"]],
     addHoverAbility: [["a[href*='.dailyuploads.net']"], ["#downloadBtnClick"]],
     addInfoBanner: [
-      ["a[href*='.dailyuploads.net']", "afterend"],
-      ["#downloadBtnClick", "afterend"],
+      { targetElement: "a[href*='.dailyuploads.net']", where: "afterend" },
+      { targetElement: "#downloadBtnClick", where: "afterend" },
     ],
     customScript() {
       this.waitUntilGlobalVariable("grecaptcha").then(() => {
@@ -2658,7 +3505,7 @@ const siteRules = {
           },
           false
         );
-        this.addGoogleRecaptchaListener(form).then(() => {
+        this.addCaptchaListener(form).then(() => {
           this.$("#downloadBtnClick").textContent = "Loading...";
         });
       });
@@ -2762,11 +3609,11 @@ const siteRules = {
       [".down a", /This direct link will be available/gi],
     ],
     addHoverAbility: undefined,
-    addInfoBanner: undefined,
-    createCountdown: ".seconds",
+    addInfoBanner: [],
+    createCountdown: { element: ".seconds" },
     customScript() {
       this.$(".row .col-md-4")?.classList?.replace("col-md-4", "col-md-12");
-      this.addGoogleRecaptchaListener(
+      this.addCaptchaListener(
         document.forms.F1,
         +this.$(".seconds").innerText || 17
       );
@@ -2902,7 +3749,7 @@ const siteRules = {
     ],
     finalDownloadElementSelector: [["#direct_link a"]],
     addHoverAbility: [["#direct_link a"]],
-    addInfoBanner: [["#direct_link", "afterend"]],
+    addInfoBanner: [{ targetElement: "#direct_link", where: "afterend" }],
     customScript() {
       const firstBtn = this.$("a[rel*='noopener']");
       firstBtn?.click();
@@ -2935,7 +3782,7 @@ const siteRules = {
       "div.string div.string_title",
       "img[src*='static.depositfiles.com']",
     ],
-    removeByRegex: [["td.text", /No Additional Fees!/gi]],
+    removeByRegex: [{ query: "td.text", regex: /No Additional Fees!/gi }],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
@@ -3073,7 +3920,7 @@ const siteRules = {
     ],
     finalDownloadElementSelector: [],
     addHoverAbility: undefined,
-    addInfoBanner: undefined,
+    addInfoBanner: [],
     customScript() {
       this.addJQuery();
       this.$("#download_url")?.removeAttribute("style");
@@ -3108,7 +3955,7 @@ const siteRules = {
   },
   clicknupload: {
     host: ["clicknupload.cc"],
-    customStyle: `html, body, div.filepanel, .dfilename, #countdown, .seconds{background:#121212!important;color:#dfdfdf!important;height:inherit!important;}[id*=Ad]{display:none!important;}#container{margin:0 auto!important;}`,
+    customStyle: `html, body, div.filepanel, .dfilename, #countdown, .seconds{background:#121212!important;color:#dfdfdf!important;height:inherit!important;}[id*=Ad],form>.regular{display:none!important;}#container{margin:0 auto!important;}#method_free{height:unset!important}`,
     downloadPageCheckBySelector: [
       "#method_free",
       "table table div",
@@ -3134,7 +3981,6 @@ const siteRules = {
       "_gaq",
       "openNav",
       "closeNav",
-      "siteScrubber",
       "share_facebook",
       "share_twitter",
       "share_gplus",
@@ -3172,11 +4018,94 @@ const siteRules = {
       "win",
       "$insertQueue058a83516144$",
       "$insertQueue35ec50ccbd9c$",
+      "setPagination",
+      "_0xb050",
+      "_0x1b62",
+      "mm",
+      "LieDetector",
+      "AaDetector",
+      "placementKey",
+      "_0xa6ab",
+      "_0x41de",
+      "_mgIntExchangeNews",
+      "AdskeeperInfC1175753",
+      "AdskeeperCContextBlock1175753",
+      "AdskeeperCMainBlock1175753",
+      "AdskeeperCInternalExchangeBlock1175753",
+      "AdskeeperCColorBlock1175753",
+      "AdskeeperCRejectBlock1175753",
+      "AdskeeperCInternalExchangeLoggerBlock1175753",
+      "AdskeeperCObserverBlock1175753",
+      "AdskeeperCSendDimensionsBlock1175753",
+      "AdskeeperCAntifraudStatisticsBlock1175753",
+      "AdskeeperCRtbBlock1175753",
+      "AdskeeperCIframeSizeChangerBlock1175753",
+      "AdskeeperCContentPreviewBlock1175753",
+      "AdskeeperCGradientBlock1175753",
+      "AdskeeperCResponsiveBlock1175753",
+      "mg_loaded_307473_1175753",
+      "AdskeeperInfC1175754",
+      "AdskeeperCContextBlock1175754",
+      "AdskeeperCMainBlock1175754",
+      "AdskeeperCInternalExchangeBlock1175754",
+      "AdskeeperCColorBlock1175754",
+      "AdskeeperCRejectBlock1175754",
+      "AdskeeperCInternalExchangeLoggerBlock1175754",
+      "AdskeeperCObserverBlock1175754",
+      "AdskeeperCSendDimensionsBlock1175754",
+      "AdskeeperCAntifraudStatisticsBlock1175754",
+      "AdskeeperCRtbBlock1175754",
+      "AdskeeperCIframeSizeChangerBlock1175754",
+      "AdskeeperCContentPreviewBlock1175754",
+      "AdskeeperCGradientBlock1175754",
+      "AdskeeperCResponsiveBlock1175754",
+      "mg_loaded_307473_1175754",
+      "onClickExcludes",
+      "mgReject1175753",
+      "mgLoadAds1175753_085db",
+      "AdskeeperCReject1175753",
+      "AdskeeperLoadGoods1175753_085db",
+      "_mgq",
+      "_mgqp",
+      "_mgqt",
+      "_mgqi",
+      "mgReject1175754",
+      "mgLoadAds1175754_05024",
+      "AdskeeperCReject1175754",
+      "AdskeeperLoadGoods1175754_05024",
+      "AdskeeperCSvsdsFlag",
+      "_mgCanonicalUri",
+      "_mgPageViewEndPoint307473",
+      "_mgPvid",
+      "_mgPageView307473",
+      "i.js.loaded",
+      "i-noref.js.loaded",
     ],
     finalDownloadElementSelector: [],
     addHoverAbility: [["button#downloadbtn.downloadbtn"]],
-    addInfoBanner: [["div#content div.download", "afterend"]],
-    createCountdown: ".seconds",
+    addInfoBanner: [
+      { targetElement: "div#content div.download", where: "afterend" },
+    ],
+    createCountdown: { element: ".seconds" },
+    modifyButtons: [
+      [
+        "input#method_free",
+        {
+          replaceWithTag: "button",
+          customText: "Free Download",
+          moveTo: {
+            target: "form > .regular",
+            position: "beforeend",
+            findParentByTag: "form",
+          },
+        },
+      ],
+      [
+        "center > button#downloadbtn",
+        { customText: "Create Download Link", makeListener: true },
+      ],
+      ["td > button#downloadbtn", { customText: "Start Download" }],
+    ],
     customScript() {
       // this.interceptAppendChild();
       // this.interceptAddEventListeners();
@@ -3200,10 +4129,17 @@ const siteRules = {
           document.forms?.F1?.submit();
         }, this.$(".seconds").textContent * 1000 || 12 * 1000);
       }
-      this.waitUntilSelector("button#downloadbtn").then((btn) => {
+      this.waitUntilSelector("td > button#downloadbtn").then((btn) => {
+        const anchor = this.document.createElement("a");
         const dl_link = btn
           .getAttribute("onclick")
           ?.replace(/window.open\('|'\);/gi, "");
+        anchor.href = dl_link;
+        btn.replaceWith(
+          this.makeSafeForm({ actionURL: dl_link, method: "GET" })
+        );
+        this.modifyButton(anchor, { customText: "Start Download" });
+        this.addHoverAbility([".ss-btn"], false);
         this.openNative(dl_link, "_self");
       });
     },
@@ -3235,7 +4171,9 @@ const siteRules = {
       "#container > .row",
       "#countdown",
     ],
-    removeByRegex: [["center", /All transactions are 100% safe and secure/gi]],
+    removeByRegex: [
+      { query: "center", regex: /All transactions are 100% safe and secure/gi },
+    ],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
@@ -3274,8 +4212,14 @@ const siteRules = {
       "emojione",
     ],
     finalDownloadElementSelector: [],
-    addHoverAbility: [["input[name='method_free']", false]],
-    addInfoBanner: [["form", "beforeend"]],
+    // addHoverAbility: [["input[name='method_free']", false]],
+    addInfoBanner: [{ targetElement: "form", where: "beforeend" }],
+    modifyButtons: [
+      [
+        "input[name='method_free']",
+        { replaceWithTag: "button", customText: "Start Download" },
+      ],
+    ],
     customScript() {
       // this.$("form[action='']")?.submit();
       this.$("input[name='method_free']")?.click();
@@ -3327,7 +4271,7 @@ const siteRules = {
       "div[style*='margin-bottom']",
       "iframe[data-id]",
     ],
-    removeByRegex: [[".blockpage .row", /About APK files/i]],
+    removeByRegex: [{ query: ".blockpage .row", regex: /About APK files/i }],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
@@ -3405,13 +4349,13 @@ const siteRules = {
     finalDownloadElementSelector: [["#direct_link a"]],
     addHoverAbility: [["button#downloadbtn", true], ["#direct_link a"]],
     addInfoBanner: [
-      [".blockpage", "beforeend"],
-      ["#commonId", "beforeend"],
+      { targetElement: ".blockpage", where: "beforeend" },
+      { targetElement: "#commonId", where: "beforeend" },
     ],
-    createCountdown: ".seconds",
+    createCountdown: { element: ".seconds" },
     customScript() {
       this.waitUntilGlobalVariable("grecaptcha").then(() =>
-        this.addGoogleRecaptchaListener(
+        this.addCaptchaListener(
           document.forms.F1,
           +this.$(".seconds").innerText || 10
         )
@@ -3439,9 +4383,9 @@ const siteRules = {
       "center",
     ],
     removeByRegex: [
-      [".download_method", /fast download/gi],
-      ["div.mt-5.text-center", /No-Captcha & More/gi],
-      [".col-md-12", /What is DoUploads/gi],
+      { query: ".download_method", regex: /fast download/gi },
+      { query: "div.mt-5.text-center", regex: /No-Captcha & More/gi },
+      { query: ".col-md-12", regex: /What is DoUploads/gi },
     ],
     hideElements: undefined,
     removeIFrames: true,
@@ -3527,8 +4471,10 @@ const siteRules = {
       ["button#downloadBtnClick", true],
       [".container.downloadPage > .row a.btn", false],
     ],
-    addInfoBanner: [[".downloadPage > .row", "beforeend"]],
-    createCountdown: ".seconds",
+    addInfoBanner: [
+      { targetElement: ".downloadPage > .row", where: "beforeend" },
+    ],
+    createCountdown: { element: ".seconds" },
     customScript() {
       const _this = this;
       this.interceptAppendChild(function (args) {
@@ -3579,8 +4525,8 @@ const siteRules = {
         document.body.outerHTML = document.body.outerHTML;
       });
       this.waitUntilGlobalVariable("grecaptcha").then(
-        () => this.addGoogleRecaptchaListener(document.forms.F1, 10)
-        // this.addGoogleRecaptchaListener(document.forms.F1, +this.$(".seconds").innerText || 10);
+        () => this.addCaptchaListener(document.forms.F1, 10)
+        // this.addCaptchaListener(document.forms.F1, +this.$(".seconds").innerText || 10);
       );
       this.ifElementExists(
         "body > div.container.pt-5.page.downloadPage > div > div.col-md-4.mt-5",
@@ -3619,7 +4565,7 @@ const siteRules = {
       // "iframe[class][scrolling][sandbox]",
       "body > div.container",
     ],
-    removeByRegex: [["body > div.container", /what is the/gi]],
+    removeByRegex: [{ query: "body > div.container", regex: /what is the/gi }],
     hideElements: undefined,
     removeIFrames: true,
     removeDisabledAttr: true,
@@ -3696,8 +4642,8 @@ const siteRules = {
       ["form button[type='submit']:not(#invisibleCaptchaShortlink)", false],
       ["form button#invisibleCaptchaShortlink", true],
     ],
-    addInfoBanner: [["form.text-center", "beforeend"]],
-    createCountdown: "#timer.timer",
+    addInfoBanner: [{ targetElement: "form.text-center", where: "beforeend" }],
+    createCountdown: { element: "#timer.timer" },
     customScript() {
       this.window.onbeforeunload = function () {};
       this.waitUntilSelector("div#captchaDownload").then(
@@ -3768,9 +4714,473 @@ const siteRules = {
       //   );
       // }
       this.waitUntilGlobalVariable("grecaptcha").then(() =>
-        this.addGoogleRecaptchaListener(document.forms?.["file-captcha"])
+        this.addCaptchaListener(document.forms?.["file-captcha"])
       );
     },
+  },
+  tusfiles: {
+    host: ["tusfiles.com"],
+    customStyle: `html,body,.box{background:#121212!important;color:#dfdfdf!important}body{min-height:unset!important}`,
+    downloadPageCheckBySelector: ["form[name='F1']", "button#downloadbtn"],
+    downloadPageCheckByRegex: [],
+    remove: [],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "k",
+      "_489b31ngxhe",
+      "h2canfv0wdg",
+      "zfgformats",
+      "setImmediate",
+      "clearImmediate",
+      "_gcpdyiwz",
+      "_eldwza",
+      "__rocketLoaderEventCtor",
+      "__rocketLoaderLoadProgressSimulator",
+      "__cfQR",
+      "delComment",
+      "player_start",
+      "copyc",
+      "jQuery110206240749867981399",
+      "app",
+      "cookieconsent",
+      "gtag",
+      "dataLayer",
+      "__cfRLUnblockHandlers",
+      "google_tag_manager",
+      "google_tag_data",
+      "GoogleAnalyticsObject",
+      "ga",
+      "onClickTrigger",
+      "kkp4a5x5tv",
+      "zfgloadedpopup",
+      "ppuWasShownFor2876021",
+      "gaplugins",
+      "gaGlobal",
+      "gaData",
+    ],
+    finalDownloadElementSelector: [],
+    addHoverAbility: [],
+    addInfoBanner: [{ targetElement: "form[name='F1']", where: "beforebegin" }],
+    createCountdown: {},
+    modifyButtons: [
+      [
+        "button#downloadbtn",
+        { customText: "Start Download", makeListener: true },
+      ],
+    ],
+    customScript() {},
+  },
+  centfile: {
+    host: ["centfile.com"],
+    customStyle: `html,body,.box,header,.page-wrap,div.text-center > div.text-center,.page-wrap > div:not([class*=ss-alert]),table tbody,table tbody tr:nth-child(even){background:#121212!important;color:#dfdfdf!important}a{color:#94b9ff!important}.rightcol{margin:25px!important}`,
+    downloadPageCheckBySelector: ["button#method_free"],
+    downloadPageCheckByRegex: [/for your IP next 24 hours/gi],
+    remove: [
+      "div.top",
+      "p[align='center']",
+      "footer",
+      "#fb-root",
+      "#fixedban",
+      "#back-to-top",
+      "br",
+      "div.pricingboxes-comparison",
+      "div.row.collapse",
+      "ul.features",
+      "center > b",
+      "div.header.d-flex",
+      "[id*='hiddensection']",
+      ".adsbygoogle",
+      ".download_method a",
+      "fixedban",
+      "#close-fixedban",
+      ".slicknav_menu",
+      "pace",
+      "button.btn-xs.btn-link",
+      "table.filepanel tr:nth-child(5)",
+      ".row > .col-md-4:nth-child(3) button",
+    ],
+    removeByRegex: [
+      { query: "center div[style*='800']", regex: /TRAVEL SINGAPORE CITY/gi },
+      {
+        query: ".row div.col-md-4.text-center:nth-child(n+2)",
+        regex: /dowasdadnload/gi,
+      },
+    ],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "setPagination",
+      "fbAsyncInit",
+      "FB",
+      "adsbygoogle",
+      "Pace",
+      "WOW",
+      "speed",
+      "startTicker",
+      "animateTickerElementHorz",
+      "canTick",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_reactive_ads_global_state",
+      "_gfp_a_",
+      "google_sa_queue",
+      "google_sl_win",
+      "google_process_slots",
+      "google_spfd",
+      "google_unique_id",
+      "google_sv_map",
+      "google_user_agent_client_hint",
+      "Goog_AdSense_getAdAdapterInstance",
+      "Goog_AdSense_OsdAdapter",
+      "google_sa_impl",
+      "google_persistent_state_async",
+      "__google_ad_urls",
+      "google_global_correlator",
+      "__google_ad_urls_id",
+      "googleToken",
+      "googleIMState",
+      "_gfp_p_",
+      "processGoogleToken",
+      "google_prev_clients",
+      "gaGlobal",
+      "goog_pvsid",
+      "google_jobrunner",
+      "ampInaboxIframes",
+      "ampInaboxPendingMessages",
+      "goog_sdr_l",
+      "google_osd_loaded",
+      "google_onload_fired",
+      "Goog_Osd_UnloadAdBlock",
+      "Goog_Osd_UpdateElementToMeasure",
+      "google_osd_amcb",
+      "GoogleGcLKhOms",
+      "google_image_requests",
+      "share_facebook",
+      "share_twitter",
+      "share_gplus",
+      "share_vk",
+      "timeout",
+      "didntload",
+      "loads",
+      "google_lpabyc",
+      "delComment",
+      "player_start",
+      "closure_lm_155599",
+      "google_trust_token_operation_promise",
+    ],
+    finalDownloadElementSelector: [],
+    addHoverAbility: [],
+    addInfoBanner: [{ targetElement: "form[name='F1']", where: "afterend" }],
+    createCountdown: {},
+    modifyButtons: [
+      [
+        "form[name='F1'] button[name='method_free']",
+        {
+          customText: "Free Download",
+          makeListener: true,
+          moveTo: { target: "form[name='F1']", position: "beforeend" },
+          requiresCaptcha: true,
+        },
+      ],
+      [
+        "form[name='F1'] input[name='method_free']",
+        {
+          customText: "Free Download",
+          makeListener: true,
+          moveTo: { target: "form[name='F1']", position: "beforeend" },
+          requiresCaptcha: true,
+          replaceWithTag: "button",
+        },
+      ],
+      [
+        "form:not([name='F1']) input[name='method_free']",
+        {
+          customText: "Free Download",
+          makeListener: true,
+          replaceWithTag: "button",
+        },
+      ],
+    ],
+    customScript() {
+      this.$$(".col-md-4").forEach((e) =>
+        e.classList.replace("col-md-4", "col-md-12")
+      );
+      this.waitUntilSelector(".err").then((err) => {
+        const parent = err.parentElement;
+        parent.insertAdjacentElement("beforebegin", err);
+      });
+      this.waitUntilSelector("div > span > a[href][onclick]").then((dl_btn) => {
+        const target = this.$(".page-wrap");
+        target?.insertAdjacentElement(
+          "beforeend",
+          this.makeSafeForm({ actionURL: dl_btn.href, method: "GET" })
+        );
+        this.addInfoBanner({ targetElement: target, where: "beforeend" });
+        this.findParentElementByTagName(dl_btn, "center")?.remove?.();
+        dl_btn.remove();
+      });
+      this.waitUntilSelector(".ss-btn-ready").then((btn) => btn?.click());
+    },
+  },
+  fastclick: {
+    host: ["fastclick.to"],
+    customStyle: `html,body,main,#container,.bg-white{background:#121212!important;color:#dfdfdf!important}a{color:#94b9ff!important}.rightcol{margin:25px!important}div.py-3.px-5.rounded-lg.mb-4.mb-xl-6.text-primary.d-flex.align-items-center{background:#212121!important}.text-primary{color:#6e6fef!important}`,
+    downloadPageCheckBySelector: [
+      "button#method_free",
+      "button#downloadbtn.downloadbtn",
+      "a.btn-download.btn",
+    ],
+    downloadPageCheckByRegex: [],
+    remove: [
+      "header",
+      "footer",
+      "div.dowload-features",
+      "main .container .container",
+      "div.h2.text-center.mb-3",
+      "a[href*='premium']",
+      "div.download-page.text-white.mb-4.mb-lg-6",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "_gaq",
+      "_gat",
+      "gaGlobal",
+      "Dialogs",
+      "delComment",
+      "player_start",
+      "timer",
+      "closure_lm_182125",
+    ],
+    finalDownloadElementSelector: [],
+    addHoverAbility: [],
+    addInfoBanner: [],
+    createCountdown: { element: "div.timer-count" },
+    modifyButtons: [
+      [
+        "button#method_free.download-btn",
+        {
+          customText: "Free Download",
+          moveTo: { target: "form[action='']", position: "beforeend" },
+        },
+      ],
+      [
+        "button#downloadbtn.downloadbtn",
+        { requiresCaptcha: true, makeListener: true },
+      ],
+      ["a.btn-download.btn", { replaceWithForm: true }],
+    ],
+    customScript() {},
+  },
+  chedrive: {
+    host: ["chedrive.com"],
+    customStyle: `html,body,.blockpage,.desc span{background:#121212!important;color:#dfdfdf!important}.blockpage,a:not([href]){color:#121212!important}`,
+    downloadPageCheckBySelector: [
+      "form[name='F1']",
+      "button#downloadbtn",
+      "span#direct_link a",
+    ],
+    downloadPageCheckByRegex: [/File Download Link Generated/gi],
+    remove: [
+      "#sidebarphone",
+      "header",
+      "footer",
+      "#footer2",
+      "#gdpr-cookie-notice",
+      ".menufooter",
+      ".as_ads_guard",
+      "br",
+      "[class^=banner]",
+      "#wrapper > div > div > form > div > div.col-xs-12.col-sm-12.col-md-8.col-lg-8",
+      ".adsbox",
+      ".sharefile",
+      ".download0page",
+      "#banner_ad", //BlockAdBlock div
+      "#countdown",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "setPagination",
+      "_gaq",
+      "WOW",
+      "_taboola",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_reactive_ads_global_state",
+      "adsbygoogle",
+      "_gfp_a_",
+      "google_sa_queue",
+      "google_sl_win",
+      "google_process_slots",
+      "google_spfd",
+      "google_unique_id",
+      "google_sv_map",
+      "google_user_agent_client_hint",
+      "downloadJSAtOnload",
+      "_gat",
+      "gaGlobal",
+      "Goog_AdSense_getAdAdapterInstance",
+      "Goog_AdSense_OsdAdapter",
+      "google_sa_impl",
+      "google_persistent_state_async",
+      "__google_ad_urls",
+      "google_global_correlator",
+      "__google_ad_urls_id",
+      "googleToken",
+      "googleIMState",
+      "_gfp_p_",
+      "processGoogleToken",
+      "google_prev_clients",
+      "goog_pvsid",
+      "google_jobrunner",
+      "ampInaboxIframes",
+      "ampInaboxPendingMessages",
+      "goog_sdr_l",
+      "timeout",
+      "google_lpabyc",
+      "relocate_home",
+      "delComment",
+      "player_start",
+      "showFullScreen",
+      "cookiesAgree",
+      "GoogleGcLKhOms",
+      "google_image_requests",
+      "kAWgyOxXhTis",
+      "vRowKfzUKP",
+      "cIuqJzgWhJ",
+      "JhOjFdIupR",
+      "ZWTPEQZYhZ",
+      "kRBeOhzLuY",
+      "oAAUBciJwG",
+      "CWSTRhNQZH",
+      "c2",
+      "c1",
+      "mAsZVZBrQfEY",
+      "RbntPCrNXp",
+    ],
+    finalDownloadElementSelector: [],
+    addHoverAbility: [],
+    addInfoBanner: [
+      { targetElement: "#commonId", where: "beforeend" },
+      { targetElement: "span#direct_link", where: "afterend" },
+    ],
+    createCountdown: {}, // ".seconds" - but page doesnt check if you waited or not
+    modifyButtons: [
+      [
+        "button#downloadbtn.downloadbtn",
+        { customText: "Create Download Link" },
+      ],
+      [
+        "span#direct_link a",
+        { customText: "Start Download", replaceWithForm: true },
+      ],
+    ],
+    customScript() {
+      this.waitUntilSelector("div.col-xs-12.col-sm-12.col-md-4.col-lg-4").then(
+        (div) => (div.className = "col-12")
+      );
+      console.timeEnd("ss");
+    },
+  },
+  nitro: {
+    host: ["nitro.download"],
+    customStyle: `html,body,#container,legend,#view,h1{background:#121212!important;color:#dfdfdf!important}#container{box-shadow:unset!important}a{color:#3096fb!important}`,
+    downloadPageCheckBySelector: ["button#slow-download", "#startFreeDownload"],
+    downloadPageCheckByRegex: [],
+    remove: [
+      "#header",
+      "#footer",
+      "#footerCredits",
+      "#lang",
+      "body > div[style*='color: #fff']",
+      "[id*='superbox']",
+      "#bottomAlerts",
+      "#alerts",
+      ".purchaseNoWaiting",
+      ".noticeMessage",
+      "#popupContent",
+      "#triggerPopup",
+      // "#beforeReCaptcha"
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [],
+    finalDownloadElementSelector: [],
+    addHoverAbility: [],
+    addInfoBanner: [],
+    createCountdown: { timer: 120 },
+    modifyButtons: [
+      ["button#slow-download", {}],
+      [
+        "button#sendReCaptcha",
+        { customText: "Free Download", requiresCaptcha: true },
+      ],
+      [
+        "button#beforeStartTimerBtn",
+        { customText: "Start Timer", requiresCaptcha: true },
+      ],
+    ],
+    customScript() {
+      this.waitUntilSelector("button#slow-download").then((btn) => {
+        const form = btn.parentElement;
+        // btn = this.modifyButton(btn, {})
+        this.$("#container")?.insertAdjacentElement("afterbegin", form);
+        this.$("#container > .content")?.remove();
+      });
+      this.waitUntilSelector("form#startFreeDownload").then((form) => {
+        // btn = this.modifyButton(btn, {})
+        return;
+        form.style = "";
+        this.$("#container")?.insertAdjacentElement("afterbegin", form);
+        this.$("#container > .content")?.remove();
+      });
+      this.waitUntilSelector("#reCaptcha").then((div) => {
+        div.style = "";
+      });
+      this.waitUntilSelector("a#download").then((btn) => {
+        this.modifyButton(btn, {
+          replaceWithForm: true,
+          customText: "Start Download",
+        });
+      });
+    },
+  },
+  NEWSITE: {
+    host: [],
+    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}`,
+    downloadPageCheckBySelector: [],
+    downloadPageCheckByRegex: [],
+    remove: [],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [],
+    finalDownloadElementSelector: [],
+    addHoverAbility: [],
+    addInfoBanner: [],
+    createCountdown: "",
+    modifyButtons: [],
+    customScript() {},
   },
 };
 

@@ -1,0 +1,202 @@
+.ss-btn {
+  display: inline-block !important;
+  padding: 24px 32px !important;
+  /* border-radius: 10rem !important; */
+  font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+  border: unset !important;
+  color: #dfdfdf !important;
+  background: #530000 !important;
+  text-transform: uppercase !important;
+  font-size: 24px !important;
+  letter-spacing: 0.15em !important;
+  transition: all 0.1s !important;
+  position: relative !important;
+  overflow: hidden !important;
+  z-index: 1 !important;
+}
+
+.ss-w-100 {
+  width: 100% !important;
+}
+
+.ss-btn-ready:after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #095800;
+  /* border-radius: 10em; */
+  transition: all 0.1s;
+  z-index: -2;
+}
+
+.ss-btn-ready:before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  height: 100%;
+  background-color: #0f9400;
+  transition: all 0.1s linear;
+  /* border-radius: 10em; */
+  z-index: -1;
+}
+.ss-btn-ready:hover:before {
+  width: 100%;
+  transition: all 2s linear;
+}
+
+.ss-btn:active {
+  transform: scale(0.975) !important;
+}
+
+.ss-btn:focus {
+  outline: 0 !important;
+}
+
+/*
+* Animated CSS button
+* Copyright Alexander Bodin 2019-09-07
+*
+*/
+
+
+.ss-animated-button {
+    background: linear-gradient(-30deg, #0b1b3d 50%, #08142b 50%);
+    padding: 20px 40px;
+    margin: 12px;
+    display: inline-block;
+    -webkit-transform: translate(0%, 0%);
+    transform: translate(0%, 0%);
+    overflow: hidden;
+    color: #d4e0f7;
+    font-size: 20px;
+    letter-spacing: 2.5px;
+    text-align: center;
+    text-transform: uppercase;
+    text-decoration: none;
+    -webkit-box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  }
+  
+  .ss-animated-button::before {
+    content: "";
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    background-color: #8592ad;
+    opacity: 0;
+    -webkit-transition: 0.2s opacity ease-in-out;
+    transition: 0.2s opacity ease-in-out;
+  }
+  
+  .ss-animated-button:hover::before {
+    opacity: 0.2;
+  }
+  
+  .ss-animated-button span {
+    position: absolute;
+  }
+  
+  .ss-animated-button span:nth-child(1) {
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 2px;
+    background: -webkit-gradient(
+      linear,
+      right top,
+      left top,
+      from(rgba(8, 20, 43, 0)),
+      to(#2662d9)
+    );
+    background: linear-gradient(to left, rgba(8, 20, 43, 0), #2662d9);
+    -webkit-animation: 2s animateTop linear infinite;
+    animation: 2s animateTop linear infinite;
+  }
+  
+  .ss-animated-button span:nth-child(2) {
+    top: 0px;
+    right: 0px;
+    height: 100%;
+    width: 2px;
+    background: -webkit-gradient(
+      linear,
+      left bottom,
+      left top,
+      from(rgba(8, 20, 43, 0)),
+      to(#2662d9)
+    );
+    background: linear-gradient(to top, rgba(8, 20, 43, 0), #2662d9);
+    -webkit-animation: 2s animateRight linear -1s infinite;
+    animation: 2s animateRight linear -1s infinite;
+  }
+  
+  .ss-animated-button span:nth-child(3) {
+    bottom: 0px;
+    left: 0px;
+    width: 100%;
+    height: 2px;
+    background: -webkit-gradient(
+      linear,
+      left top,
+      right top,
+      from(rgba(8, 20, 43, 0)),
+      to(#2662d9)
+    );
+    background: linear-gradient(to right, rgba(8, 20, 43, 0), #2662d9);
+    -webkit-animation: 2s animateBottom linear infinite;
+    animation: 2s animateBottom linear infinite;
+  }
+  
+  .ss-animated-button span:nth-child(4) {
+    top: 0px;
+    left: 0px;
+    height: 100%;
+    width: 2px;
+    background: -webkit-gradient(
+      linear,
+      left top,
+      left bottom,
+      from(rgba(8, 20, 43, 0)),
+      to(#2662d9)
+    );
+    background: linear-gradient(to bottom, rgba(8, 20, 43, 0), #2662d9);
+    -webkit-animation: 2s animateLeft linear -1s infinite;
+    animation: 2s animateLeft linear -1s infinite;
+  }
+
+/* .ss-btn-incomplete {
+    background: #9d0000 !important;
+} */
+
+/* .ss-btn-ready {
+  background-color: #109d00 !important;
+} */
+
+/* .ss-btn:before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0%;
+    height: 100%;
+    transition: all .1s linear;
+    border-radius: 10em;
+    z-index: -1
+} */
+
+/* .ss-btn:hover {
+    color: #fff
+}
+
+.ss-btn:hover:before {
+    width: 100%;
+    transition: all 2s linear
+} */

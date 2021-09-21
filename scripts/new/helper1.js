@@ -65,10 +65,23 @@ var revoke = [
   "bootstrap",
   "siteScrubber",
 ];
-JSON.stringify(diff.filter((x) => !revoke.includes(x)));
+JSON.stringify(diff.filter((x) => !revoke.includes(x) && !x.match(/jquery\d+/gi)));
 
-one = []
+one = ["setPagination","_gaq","WOW","_taboola","_gat","options","lary","addEventListener","k","adsbygoogle","cookiesAgree","zfgformats","google_js_reporting_queue","google_srt","google_logging_queue","google_ad_modifications","ggeac","google_measure_js_timing","google_reactive_ads_global_state","google_user_agent_client_hint","kAWgyOxXhTis","vRowKfzUKP","cIuqJzgWhJ","JhOjFdIupR","ZWTPEQZYhZ","kRBeOhzLuY","oAAUBciJwG","CWSTRhNQZH","c2","c1","I5XCBfeVDZKA","RbntPCrNXp","timeout","relocate_home","delComment","player_start","showFullScreen","_gfp_a_"]
 
-two = []
+two = [
+  "setPagination",
+  "_gaq",
+  "WOW",
+  "_taboola",
+  "_gat",
+  "options",
+  "lary",
+  "addEventListener",
+  "k",
+  "adsbygoogle",
+  "cookiesAgree",
+  "zfgformats",
+]
 
-three = [...new Set([].concat(one, two))].filter((x) => !revoke.includes(x));
+three = [...new Set([].concat(one, two))].filter((x) => !revoke.includes(x) && !x.match(/jquery\d+/gi));
