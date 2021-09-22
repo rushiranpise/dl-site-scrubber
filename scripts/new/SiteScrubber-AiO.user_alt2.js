@@ -76,8 +76,6 @@ class SiteScrubber {
     this.origClearTimeout = window.clearTimeout.bind(window);
 
     this.countdownSecondsLeft = 0;
-    // this.countdownInterval = null;
-    this.countdownPhantomElement = this.document.createElement("i");
 
     this._buttons = [];
     this._intervals = {};
@@ -100,7 +98,10 @@ class SiteScrubber {
     );
     if (this.ssButtonWatchDog === true) {
       // Ready, so click/submit
-      this.waitUntilSelector(".ss-btn-ready").then((ssBtn) => ssBtn.click());
+      this.waitUntilSelector(".ss-btn-ready").then((ssBtn) => {
+        // return this.log("WOULD'VE CLICKED ss-btn");
+        ssBtn.click();
+      });
     }
     if (
       this.document.readyState === "complete" ||
@@ -676,6 +677,7 @@ class SiteScrubber {
     const whitelist = [
       "siteScrubber",
       "$",
+      "$$",
       "jQuery",
       "___grecaptcha_cfg",
       "grecaptcha",
@@ -699,7 +701,7 @@ class SiteScrubber {
             return function () {};
           },
         });
-        this.logDebug(`Destoyed window function: 'window.${option}'`);
+        // this.logDebug(`Destoyed window function: 'window.${option}'`);
       } catch (e) {
         this.logDebug(`FAILED to destroy window function: 'window.${option}'`);
         this.logDebug(e);
@@ -788,37 +790,32 @@ class SiteScrubber {
     HTMLElement.prototype.appendChild = customAppendChild;
     _this.document.appendChild = customAppendChild;
   }
-  createCountdown({ element = this.countdownPhantomElement, timer }) {
-    if (typeof element == "string" || element instanceof String) {
-      element = this.$(element);
-    }
-    if (!(element instanceof HTMLElement) || null === element) {
+  createCountdown({ element, timer }) {
+    let el = this.getDOMElement(element);
+    if (!this.isElement(el)) {
       this.logDebug("createCountdown - failed to find element");
+      this.logDebugNaked(arguments);
       return;
-    } else if (!timer && isNaN(+element.innerText)) {
-      // default
-      timer = 30;
+      el = this.document.createElement("i");
+    } else if (timer) {
+      el.innerText = timer;
     } else {
-      timer = +element.innerText;
+      timer = +el?.innerText || 30;
     }
+
     this.logDebug("createCountdown - found element, creating timer");
     this.countdownSecondsLeft = timer;
     this.addInterval({
-      fn: this.tick.bind(this, element),
+      fn: this.tick.bind(this, el),
       interval: 1000,
       customID: "countdown-interval",
     });
-    // this.countdownInterval = this.origSetInterval(
-    //   this.tick.bind(this, element),
-    //   1000
-    // );
   }
   tick(element) {
     const remaining = --this.countdownSecondsLeft;
-    element.innerText = remaining;
+    const el = this.getDOMElement(element) || this.document.createElement("i");
+    el.innerText = remaining;
     if (remaining <= 0) {
-      // clearInterval(this.countdownInterval);
-      // this.countdownInterval = null;
       this.removeInterval("countdown-interval");
     } else {
       this.logDebug(`Tick: ${remaining}`);
@@ -849,17 +846,21 @@ class SiteScrubber {
       copyAttributesFromElement,
       customText,
       className,
-      id,
-      style,
+      href,
       props,
+      styles,
+      attributes,
+      eventHandlers,
       makeListener,
       requiresCaptcha,
+      requiresTimer,
       addHoverAbility,
       moveTo = {
         target: undefined,
         position: undefined,
         findParentByTag: undefined,
       },
+      fn=()=>{},
     } = {}
   ) {
     button = this.getDOMElement(button);
@@ -869,7 +870,10 @@ class SiteScrubber {
       return;
     }
 
-    // Check and alert user of error
+    // Custom function (if needed) to modify button by hand
+    fn(button);
+
+    // Check and alert user of mixed content error
     if (button.tagName === "A") {
       const dl_link = button.href;
       if (
@@ -885,14 +889,20 @@ class SiteScrubber {
     }
 
     if (replaceWithForm === true) {
-      if (button.tagName === "A") {
-        const form = this.makeSafeForm({
-          actionURL: button.href,
-          method: "GET",
-        });
-        button.parentElement.replaceChild(form, button);
-        button = form.querySelector(".ss-btn");
-      }
+      const safeFormOptions = {
+        actionURL: button.href || href || "",
+        method: "GET",
+      };
+      // if (button.tagName === "A") {
+      //   safeFormOptions.actionURL = button.href || href || "";
+      // } else {
+      //   safeFormOptions = {
+      //     actionURL: href || "",
+      //   }
+      // }
+      const form = this.makeSafeForm(safeFormOptions);
+      button.parentElement.replaceChild(form, button);
+      button = form.querySelector(".ss-btn");
     } else if (replaceWithTag && typeof replaceWithTag === "string") {
       const customTag = this.document.createElement(replaceWithTag);
       if (this.isElement(copyAttributesFromElement)) {
@@ -910,15 +920,19 @@ class SiteScrubber {
       button.innerHTML = customText;
     }
     button.className = className || "ss-btn ss-w-100";
-    if (void 0 !== id) {
-      button.id = id;
-    }
-    if (void 0 !== style) {
-      button.style = style;
-    }
-    for (let key in props) {
+    for (const key in props) {
       button[key] = props[key];
     }
+    for (const key in styles) {
+      button.style[key] = styles[key];
+    }
+    for (const key in attributes) {
+      button.setAttribute(key, attributes[key]);
+    }
+    for (const key in eventHandlers) {
+      button.addEventListener(key, eventHandlers[key]);
+    }
+
     if (makeListener === true) {
       let fn = () => {};
       if (requiresCaptcha === true) {
@@ -949,7 +963,7 @@ class SiteScrubber {
       });
     }
     if (addHoverAbility !== false) {
-      if (!requiresCaptcha) {
+      if (!requiresCaptcha && !requiresTimer) {
         button.classList.add("ss-btn-ready");
       }
       this.addHoverAbility(button, !!requiresCaptcha);
@@ -980,10 +994,11 @@ class SiteScrubber {
     }
     return button;
   }
-  makeSafeForm({ actionURL, method = "GET" }) {
+  makeSafeForm({ actionURL, method = "GET", target = "_blank" }) {
     const form = this.document.createElement("form");
     form.action = actionURL;
     form.method = method;
+    form.target = target;
 
     const submitBtn = this.document.createElement("button");
     submitBtn.type = "submit";
@@ -1011,9 +1026,8 @@ class SiteScrubber {
 
     if (this.currSiteRules?.createCountdown) {
       this.createCountdown(this.currSiteRules?.createCountdown);
-      this.log(
-        `Created countdown using: ${this.currSiteRules?.createCountdown}`
-      );
+      this.log(`Created countdown`);
+      this.logDebugNaked(this.currSiteRules?.createCountdown);
     }
     this.removeElements(this.currSiteRules?.remove);
     // this.plug("Removed Elements");
@@ -1329,7 +1343,7 @@ const siteRules = {
       "techssting.com",
       "techyneed.com",
     ],
-    customStyle: `html,body,#container,.bg-white{background:#121212!important;color:#dfdfdf!important}.download_box{background-color:#323232!important}ins,#badip,#vi-smartbanner,.adsBox,vli,div[style*='2147483650'],#modalpop,#overlaypop{display:none!important}body{padding-bottom:unset!important}`, // body > div:not([class])
+    customStyle: `html,body,#container,.bg-white{background:#121212!important;color:#dfdfdf!important}.download_box,.fileInfo{background-color:#323232!important}ins,#badip,#vi-smartbanner,.adsBox,vli,div[style*='2147483650'],#modalpop,#overlaypop{display:none!important}body{padding-bottom:unset!important}`, // body > div:not([class])
     downloadPageCheckBySelector: ["button[name='method_free']", "a#dl"],
     downloadPageCheckByRegex: [
       /Click here to download/gi,
@@ -1353,7 +1367,6 @@ const siteRules = {
       { query: "ul", regex: /What is DropGalaxy?/gi },
       { query: "div.mt-5.text-center", regex: /ad-free/gi },
     ],
-    hideElements: undefined,
     removeIFrames: true,
     removeDisabledAttr: true,
     destroyWindowFunctions: [
@@ -1488,20 +1501,37 @@ const siteRules = {
       "a",
       "refS",
     ],
-    finalDownloadElementSelector: [
-      ["div.container.page.downloadPage > div > div.col-md-4 > a"],
-    ],
-    addHoverAbility: [
-      ["div.container.page.downloadPage > div > div.col-md-4 > a"],
-      ["button#dl"],
-    ],
     addInfoBanner: [
       {
         targetElement: ".container.page.downloadPage .row",
         where: "beforeend",
       },
     ],
-    createCountdown: { element: ".seconds" },
+    modifyButtons: [
+      ["button[name='method_free']"],
+      [
+        "button#downloadBtnClick",
+        {
+          makeListener: true,
+          requiresTimer: true,
+          props: { onclick: "", style: "" },
+        },
+      ],
+      // [
+      //   "div.container.page.downloadPage > div > div.col-md-4 > a",
+      //   {
+      //     replaceWithForm: true,
+      //     props: { onclick: "", style: "" },
+      //   },
+      // ],
+      [
+        "button#dl",
+        {
+          props: { onclick: "", style: "" },
+        },
+      ],
+    ],
+    createCountdown: { timer: 10, element: ".seconds" },
     customScript() {
       this.$("body").classList.remove("white");
       this.$("body").classList.add("dark");
@@ -1520,58 +1550,27 @@ const siteRules = {
         e.classList.replace("col-md-4", "col-12")
       );
 
-      this.$("button[name='method_free']")?.click();
-
-      this.waitUntilSelector("a.btn.btn-block.btn-lg.btn-primary").then(
-        (dl_btn) => {
-          dl_btn.removeAttribute("style");
-          dl_btn.removeAttribute("onclick");
-        }
-      );
-      this.waitUntilSelector("form button#dl").then((dl_btn) => {
-        dl_btn.removeAttribute("style");
-        dl_btn.removeAttribute("onclick");
-      });
-      this.waitUntilGlobalVariable("go").then(() => (window.go = undefined));
-      this.waitUntilGlobalVariable("absda").then(() => {
-        window.absda = undefined;
-      });
-
-      this.$("#downloadhash")?.setAttribute("value", "0");
-      this.$("#dropgalaxyisbest")?.setAttribute("value", "0");
-      this.$("#adblock_check")?.setAttribute("value", "0");
-      this.$("#adblock_detected")?.setAttribute("value", "1");
-      this.$("#admaven_popup")?.setAttribute("value", "1");
       if (this.$("#xd")) {
-        this.sleep(+this.$(".seconds")?.innerText * 1000 || 10000).then(() => {
-          fetch("https://tmp.dropgalaxy.in/gettoken.php", {
-            headers: {
-              accept: "*/*",
-              "accept-language": "en-US,en;q=0.9",
-              "content-type":
-                "application/x-www-form-urlencoded; charset=UTF-8",
-              "sec-fetch-dest": "empty",
-              "sec-fetch-mode": "cors",
-              "sec-fetch-site": "cross-site",
-              "sec-gpc": "1",
-            },
-            referrer: "https://dropgalaxy.com/",
-            referrerPolicy: "strict-origin-when-cross-origin",
-            body: "rand=&msg=91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C005004%2C9007%2C100%2C10005%2C11007%2C9007%2C114%2C100%2C005004%2C11007%2C110%2C108%2C111%2C99%2C10007%2C101%2C100%2C005004%2C118%2C101%2C114%2C115%2C105%2C111%2C110%2C9005%2C91%2C114%2C9007%2C110%2C100%2C61%2C9005%2C91%2C105%2C100%2C61%2C10005%2C5004%2C119%2C106%2C116%2C10005%2C10005%2C10041%2C5007%2C10040%2C5005%2C100%2C9005%2C91%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C105%2C115%2C98%2C101%2C115%2C116%2C61%2C48%2C9005%2C91%2C9007%2C100%2C98%2C108%2C111%2C99%2C10007%2C95%2C100%2C101%2C116%2C101%2C99%2C116%2C101%2C100%2C61%2C49%2C9005%2C91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C104%2C9007%2C115%2C104%2C61%2C49%2C9005%2C91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C104%2C9007%2C115%2C104%2C9007%2C100%2C61%2C11007%2C110%2C100%2C101%2C10004%2C105%2C110%2C101%2C100%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C119%2C119%2C119%2C46%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C116%2C9007%2C98%2C108%2C101%2C116%2C111%2C11004%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C115%2C116%2C9007%2C116%2C105%2C99%2C46%2C99%2C108%2C111%2C11007%2C100%2C10004%2C108%2C9007%2C114%2C101%2C105%2C110%2C115%2C105%2C10005%2C104%2C116%2C115%2C46%2C99%2C111%2C109%2C4007%2C98%2C101%2C9007%2C99%2C111%2C110%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C116%2C9007%2C10005%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C118%2C49%2C4007%2C49%2C54%2C51%2C49%2C5005%2C48%2C5005%2C55%2C56%2C5007%2C4007%2C56%2C5005%2C99%2C55%2C50%2C5005%2C100%2C55%2C5004%2C99%2C50%2C5007%2C54%2C10004%2C10004%2C5007%2C54%2C100%2C48%2C48%2C55%2C10004%2C5004%2C99%2C51%2C56%2C9007%2C9007%2C50%2C54%2C51%2C54%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C114%2C101%2C98%2C105%2C100%2C4007%2C100%2C101%2C10004%2C9007%2C11007%2C108%2C116%2C4007%2C11004%2C114%2C101%2C98%2C105%2C100%2C45%2C118%2C5005%2C46%2C49%2C50%2C46%2C48%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C119%2C119%2C119%2C46%2C10005%2C111%2C111%2C10005%2C108%2C101%2C116%2C9007%2C10005%2C115%2C101%2C114%2C118%2C105%2C99%2C101%2C115%2C46%2C99%2C111%2C109%2C4007%2C116%2C9007%2C10005%2C4007%2C106%2C115%2C4007%2C10005%2C11004%2C116%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C105%2C109%2C9007%2C115%2C100%2C10007%2C46%2C10005%2C111%2C111%2C10005%2C108%2C101%2C9007%2C11004%2C105%2C115%2C46%2C99%2C111%2C109%2C4007%2C106%2C115%2C4007%2C115%2C100%2C10007%2C108%2C111%2C9007%2C100%2C101%2C114%2C4007%2C105%2C109%2C9007%2C51%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C108%2C11007%2C10005%2C105%2C110%2C115%2C4007%2C115%2C9007%2C10004%2C101%2C10004%2C114%2C9007%2C109%2C101%2C4007%2C115%2C114%2C99%2C4007%2C106%2C115%2C4007%2C115%2C10004%2C95%2C104%2C111%2C115%2C116%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C115%2C101%2C99%2C11007%2C114%2C101%2C11004%2C11007%2C98%2C9007%2C100%2C115%2C46%2C10005%2C46%2C100%2C111%2C11007%2C98%2C108%2C101%2C99%2C108%2C105%2C99%2C10007%2C46%2C110%2C101%2C116%2C4007%2C10005%2C11004%2C116%2C4007%2C11004%2C11007%2C98%2C9007%2C100%2C115%2C95%2C105%2C109%2C11004%2C108%2C95%2C50%2C48%2C50%2C49%2C48%2C5007%2C48%2C55%2C48%2C49%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C100%2C11005%2C48%2C54%2C11007%2C5007%2C108%2C116%2C5005%2C9007%2C10007%2C114%2C50%2C46%2C99%2C108%2C111%2C11007%2C100%2C10004%2C114%2C111%2C110%2C116%2C46%2C110%2C101%2C116%2C4007%2C0076%2C99%2C8007%2C8004%2C108%2C90%2C10007%2C8004%2C0079%2C69%2C65%2C119%2C6007%2C101%2C85%2C104%2C86%2C85%2C86%2C5005%2C51%2C8004%2C119%2C005007%2C51%2C68%2C005007%2C51%2C68%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C99%2C46%2C9007%2C100%2C115%2C99%2C111%2C46%2C114%2C101%2C4007%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C108%2C8005%2C0079%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C84%2C54%2C8007%2C84%2C65%2C0070%2C104%2C80%2C115%2C45%2C86%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C0071%2C90%2C104%2C50%2C51%2C10041%2C10040%2C106%2C56%2C10007%2C81%2C10007%2C84%2C48%2C0078%2C85%2C8005%2C84%2C0071%2C007007%2C5004%2C51%2C105%2C66%2C51%2C95%2C0070%2C007004%2C11007%2C95%2C65%2C55%2C99%2C9007%2C11004%2C0071%2C0076%2C5004%2C98%2C99%2C99%2C10007%2C81%2C119%2C81%2C66%2C0071%2C007007%2C69%2C81%2C6007%2C007005%2C65%2C11005%2C118%2C110%2C68%2C98%2C115%2C9007%2C56%2C10004%2C0078%2C104%2C84%2C115%2C0079%2C48%2C51%2C0075%2C116%2C99%2C116%2C111%2C10007%2C10005%2C007005%2C007004%2C0078%2C1004004%2C11004%2C11007%2C54%2C100%2C0070%2C89%2C68%2C007007%2C84%2C0076%2C66%2C9007%2C119%2C99%2C0079%2C65%2C105%2C65%2C10041%2C007007%2C95%2C56%2C5007%2C0070%2C007004%2C51%2C9007%2C10005%2C6007%2C007007%2C0079%2C86%2C101%2C110%2C5005%2C10005%2C114%2C10005%2C9007%2C007004%2C65%2C8007%2C99%2C45%2C0074%2C0074%2C10041%2C0076%2C50%2C10005%2C109%2C6007%2C86%2C1004004%2C114%2C007004%2C104%2C88%2C116%2C66%2C10005%2C0058%2C118%2C61%2C5004%2C0058%2C90%2C110%2C8004%2C10005%2C69%2C84%2C10040%2C007005%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C101%2C11004%2C99%2C104%2C8007%2C0078%2C11005%2C0074%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C114%2C109%2C0075%2C106%2C110%2C115%2C007004%2C0079%2C61%2C0058%2C66%2C0070%2C0074%2C007004%2C007007%2C115%2C116%2C10007%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C56%2C50%2C55%2C45%2C119%2C104%2C9007%2C116%2C45%2C105%2C115%2C45%2C105%2C110%2C115%2C11007%2C114%2C9007%2C110%2C99%2C101%2C45%2C99%2C111%2C118%2C101%2C114%2C9007%2C10005%2C101%2C46%2C104%2C116%2C109%2C108%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C0",
-            method: "POST",
-            mode: "cors",
-            credentials: "omit",
-          })
-            .then((res) => res.text())
-            .then((code) => {
-              this.$("#xd")?.setAttribute("value", code);
-              document.forms?.F1?.submit();
-            });
-        });
+        this.$("#downloadhash")?.setAttribute("value", "0");
+        this.$("#dropgalaxyisbest")?.setAttribute("value", "0");
+        this.$("#adblock_check")?.setAttribute("value", "0");
+        this.$("#adblock_detected")?.setAttribute("value", "1");
+        this.$("#admaven_popup")?.setAttribute("value", "1");
       }
+
       this.interceptAJAX(function (args) {
-        if (arguments?.[0]?.url?.match(/userusage/gi)) {
+        const ajaxOptions = arguments?.[0];
+        if (ajaxOptions?.url?.match(/userusage/gi)) {
           return false;
+        }
+        if (
+          ajaxOptions?.url?.search("https://tmp.dropgalaxy.in/gettoken.php") >
+          -1
+        ) {
+          // data capture from a request made from a browser with no Ad-Blockers
+          // site then thinks its legit so it works
+          const data = `rand=&msg=91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C005004%2C9007%2C100%2C10005%2C11007%2C9007%2C114%2C100%2C005004%2C11007%2C110%2C108%2C111%2C99%2C10007%2C101%2C100%2C005004%2C118%2C101%2C114%2C115%2C105%2C111%2C110%2C9005%2C91%2C114%2C9007%2C110%2C100%2C61%2C9005%2C91%2C105%2C100%2C61%2C10005%2C5004%2C119%2C106%2C116%2C10005%2C10005%2C10041%2C5007%2C10040%2C5005%2C100%2C9005%2C91%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C105%2C115%2C98%2C101%2C115%2C116%2C61%2C48%2C9005%2C91%2C9007%2C100%2C98%2C108%2C111%2C99%2C10007%2C95%2C100%2C101%2C116%2C101%2C99%2C116%2C101%2C100%2C61%2C49%2C9005%2C91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C104%2C9007%2C115%2C104%2C61%2C49%2C9005%2C91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C104%2C9007%2C115%2C104%2C9007%2C100%2C61%2C11007%2C110%2C100%2C101%2C10004%2C105%2C110%2C101%2C100%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C119%2C119%2C119%2C46%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C116%2C9007%2C98%2C108%2C101%2C116%2C111%2C11004%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C115%2C116%2C9007%2C116%2C105%2C99%2C46%2C99%2C108%2C111%2C11007%2C100%2C10004%2C108%2C9007%2C114%2C101%2C105%2C110%2C115%2C105%2C10005%2C104%2C116%2C115%2C46%2C99%2C111%2C109%2C4007%2C98%2C101%2C9007%2C99%2C111%2C110%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C116%2C9007%2C10005%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C118%2C49%2C4007%2C49%2C54%2C51%2C49%2C5005%2C48%2C5005%2C55%2C56%2C5007%2C4007%2C56%2C5005%2C99%2C55%2C50%2C5005%2C100%2C55%2C5004%2C99%2C50%2C5007%2C54%2C10004%2C10004%2C5007%2C54%2C100%2C48%2C48%2C55%2C10004%2C5004%2C99%2C51%2C56%2C9007%2C9007%2C50%2C54%2C51%2C54%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C114%2C101%2C98%2C105%2C100%2C4007%2C100%2C101%2C10004%2C9007%2C11007%2C108%2C116%2C4007%2C11004%2C114%2C101%2C98%2C105%2C100%2C45%2C118%2C5005%2C46%2C49%2C50%2C46%2C48%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C119%2C119%2C119%2C46%2C10005%2C111%2C111%2C10005%2C108%2C101%2C116%2C9007%2C10005%2C115%2C101%2C114%2C118%2C105%2C99%2C101%2C115%2C46%2C99%2C111%2C109%2C4007%2C116%2C9007%2C10005%2C4007%2C106%2C115%2C4007%2C10005%2C11004%2C116%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C105%2C109%2C9007%2C115%2C100%2C10007%2C46%2C10005%2C111%2C111%2C10005%2C108%2C101%2C9007%2C11004%2C105%2C115%2C46%2C99%2C111%2C109%2C4007%2C106%2C115%2C4007%2C115%2C100%2C10007%2C108%2C111%2C9007%2C100%2C101%2C114%2C4007%2C105%2C109%2C9007%2C51%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C108%2C11007%2C10005%2C105%2C110%2C115%2C4007%2C115%2C9007%2C10004%2C101%2C10004%2C114%2C9007%2C109%2C101%2C4007%2C115%2C114%2C99%2C4007%2C106%2C115%2C4007%2C115%2C10004%2C95%2C104%2C111%2C115%2C116%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C115%2C101%2C99%2C11007%2C114%2C101%2C11004%2C11007%2C98%2C9007%2C100%2C115%2C46%2C10005%2C46%2C100%2C111%2C11007%2C98%2C108%2C101%2C99%2C108%2C105%2C99%2C10007%2C46%2C110%2C101%2C116%2C4007%2C10005%2C11004%2C116%2C4007%2C11004%2C11007%2C98%2C9007%2C100%2C115%2C95%2C105%2C109%2C11004%2C108%2C95%2C50%2C48%2C50%2C49%2C48%2C5007%2C48%2C55%2C48%2C49%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C100%2C11005%2C48%2C54%2C11007%2C5007%2C108%2C116%2C5005%2C9007%2C10007%2C114%2C50%2C46%2C99%2C108%2C111%2C11007%2C100%2C10004%2C114%2C111%2C110%2C116%2C46%2C110%2C101%2C116%2C4007%2C0076%2C99%2C8007%2C8004%2C108%2C90%2C10007%2C8004%2C0079%2C69%2C65%2C119%2C6007%2C101%2C85%2C104%2C86%2C85%2C86%2C5005%2C51%2C8004%2C119%2C005007%2C51%2C68%2C005007%2C51%2C68%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C99%2C46%2C9007%2C100%2C115%2C99%2C111%2C46%2C114%2C101%2C4007%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C108%2C8005%2C0079%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C84%2C54%2C8007%2C84%2C65%2C0070%2C104%2C80%2C115%2C45%2C86%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C0071%2C90%2C104%2C50%2C51%2C10041%2C10040%2C106%2C56%2C10007%2C81%2C10007%2C84%2C48%2C0078%2C85%2C8005%2C84%2C0071%2C007007%2C5004%2C51%2C105%2C66%2C51%2C95%2C0070%2C007004%2C11007%2C95%2C65%2C55%2C99%2C9007%2C11004%2C0071%2C0076%2C5004%2C98%2C99%2C99%2C10007%2C81%2C119%2C81%2C66%2C0071%2C007007%2C69%2C81%2C6007%2C007005%2C65%2C11005%2C118%2C110%2C68%2C98%2C115%2C9007%2C56%2C10004%2C0078%2C104%2C84%2C115%2C0079%2C48%2C51%2C0075%2C116%2C99%2C116%2C111%2C10007%2C10005%2C007005%2C007004%2C0078%2C1004004%2C11004%2C11007%2C54%2C100%2C0070%2C89%2C68%2C007007%2C84%2C0076%2C66%2C9007%2C119%2C99%2C0079%2C65%2C105%2C65%2C10041%2C007007%2C95%2C56%2C5007%2C0070%2C007004%2C51%2C9007%2C10005%2C6007%2C007007%2C0079%2C86%2C101%2C110%2C5005%2C10005%2C114%2C10005%2C9007%2C007004%2C65%2C8007%2C99%2C45%2C0074%2C0074%2C10041%2C0076%2C50%2C10005%2C109%2C6007%2C86%2C1004004%2C114%2C007004%2C104%2C88%2C116%2C66%2C10005%2C0058%2C118%2C61%2C5004%2C0058%2C90%2C110%2C8004%2C10005%2C69%2C84%2C10040%2C007005%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C101%2C11004%2C99%2C104%2C8007%2C0078%2C11005%2C0074%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C114%2C109%2C0075%2C106%2C110%2C115%2C007004%2C0079%2C61%2C0058%2C66%2C0070%2C0074%2C007004%2C007007%2C115%2C116%2C10007%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C56%2C50%2C55%2C45%2C119%2C104%2C9007%2C116%2C45%2C105%2C115%2C45%2C105%2C110%2C115%2C11007%2C114%2C9007%2C110%2C99%2C101%2C45%2C99%2C111%2C118%2C101%2C114%2C9007%2C10005%2C101%2C46%2C104%2C116%2C109%2C108%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C0`;
+          ajaxOptions.data = data;
         }
         return true;
       });
@@ -4081,8 +4080,8 @@ const siteRules = {
       "i.js.loaded",
       "i-noref.js.loaded",
     ],
-    finalDownloadElementSelector: [],
-    addHoverAbility: [["button#downloadbtn.downloadbtn"]],
+    // finalDownloadElementSelector: [],
+    // addHoverAbility: [["button#downloadbtn.downloadbtn"]],
     addInfoBanner: [
       { targetElement: "div#content div.download", where: "afterend" },
     ],
@@ -4104,13 +4103,25 @@ const siteRules = {
         "center > button#downloadbtn",
         { customText: "Create Download Link", makeListener: true },
       ],
-      ["td > button#downloadbtn", { customText: "Start Download" }],
+      [
+        "td > button#downloadbtn",
+        {
+          customText: "Start Download",
+          replaceWithForm: true,
+          fn(btn) {
+            btn.href = btn
+              .getAttribute("onclick")
+              ?.replace(/window.open\('|'\);/gi, "");
+          },
+        },
+      ],
     ],
+    createCountdown: { element: ".seconds" },
     customScript() {
       // this.interceptAppendChild();
       // this.interceptAddEventListeners();
       // click the "Slow Download" option on page 1
-      this.$("#method_free")?.click();
+      // this.$("#method_free")?.click();
       const captcha_box = this.$("table table div");
 
       if (captcha_box) {
@@ -4125,23 +4136,24 @@ const siteRules = {
           .map((e) => e.textContent)
           .join("");
         this.$("input.captcha_code").value = captcha_code;
-        this.origSetTimeout(() => {
-          document.forms?.F1?.submit();
-        }, this.$(".seconds").textContent * 1000 || 12 * 1000);
+        // this.origSetTimeout(() => {
+        //   document.forms?.F1?.submit();
+        // }, this.$(".seconds").textContent * 1000 || 12 * 1000);
       }
-      this.waitUntilSelector("td > button#downloadbtn").then((btn) => {
-        const anchor = this.document.createElement("a");
-        const dl_link = btn
-          .getAttribute("onclick")
-          ?.replace(/window.open\('|'\);/gi, "");
-        anchor.href = dl_link;
-        btn.replaceWith(
-          this.makeSafeForm({ actionURL: dl_link, method: "GET" })
-        );
-        this.modifyButton(anchor, { customText: "Start Download" });
-        this.addHoverAbility([".ss-btn"], false);
-        this.openNative(dl_link, "_self");
-      });
+      // this.waitUntilSelector("td > button#downloadbtn").then((btn) => {
+      //   this.modifyButton(btn, {});
+      //   const anchor = this.document.createElement("a");
+      //   const dl_link = btn
+      //     .getAttribute("onclick")
+      //     ?.replace(/window.open\('|'\);/gi, "");
+      //   anchor.href = dl_link;
+      //   btn.replaceWith(
+      //     this.makeSafeForm({ actionURL: dl_link, method: "GET" })
+      //   );
+      //   this.modifyButton(anchor, { customText: "Start Download" });
+      //   this.addHoverAbility([".ss-btn"], false);
+      //   this.openNative(dl_link, "_self");
+      // });
     },
   },
   hexupload: {
