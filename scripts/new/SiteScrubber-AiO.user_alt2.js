@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber - All-in-One
 // @namespace    SiteScrubber
-// @version      1.1.0
+// @version      2.0.0
 // @description  Scrub site of ugliness and ease the process of downloading from multiple sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -14,6 +14,7 @@
 // @include      /^(?:https?:\/\/)?(?:www\.)?drop\.download\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?mixloads\.com//
 // @include      /^(?:https?:\/\/)?(?:www\.)?dropgalaxy\.(in|com)\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?financemonk\.net\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?tech(ssting|yneed)\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?file-up(load)?\.(com|org)\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?up-load\.io\//
@@ -1342,6 +1343,7 @@ const siteRules = {
       "dropgalaxy.in",
       "techssting.com",
       "techyneed.com",
+      "financemonk.net",
     ],
     customStyle: `html,body,#container,.bg-white{background:#121212!important;color:#dfdfdf!important}.download_box,.fileInfo{background-color:#323232!important}ins,#badip,#vi-smartbanner,.adsBox,vli,div[style*='2147483650'],#modalpop,#overlaypop{display:none!important}body{padding-bottom:unset!important}`, // body > div:not([class])
     downloadPageCheckBySelector: ["button[name='method_free']", "a#dl"],
