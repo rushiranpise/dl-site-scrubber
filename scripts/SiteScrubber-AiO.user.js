@@ -5,7 +5,7 @@
 // @description  Scrub site of ugliness and ease the process of downloading from multiple sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
-// @icon         https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/icons/SiteScrubber-aio_icon.png
+// @icon         https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/assets/icons/SiteScrubber-aio_icon.png
 // @homepageURL  https://github.com/PrimePlaya24/dl-site-scrubber
 // @supportURL   https://github.com/PrimePlaya24/dl-site-scrubber/issues
 // @updateURL    https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/scripts/SiteScrubber-AiO.meta.js
