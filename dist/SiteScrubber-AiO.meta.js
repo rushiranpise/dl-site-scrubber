@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SiteScrubber
-// @namespace    PrimePlaya24
+// @namespace    SiteScrubber
 // @version      1.1.2
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
