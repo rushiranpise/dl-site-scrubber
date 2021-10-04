@@ -1,15 +1,15 @@
 // ==UserScript==
-// @name         SiteScrubber - All-in-One
-// @namespace    SiteScrubber
-// @version      1.1.1
-// @description  Scrub site of ugliness and ease the process of downloading from multiple sites!
+// @name         SiteScrubber
+// @namespace    PrimePlaya24
+// @version      1.1.2
+// @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
 // @icon         https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/icons/SiteScrubber-aio_icon.png
 // @homepageURL  https://github.com/PrimePlaya24/dl-site-scrubber
 // @supportURL   https://github.com/PrimePlaya24/dl-site-scrubber/issues
-// @updateURL    https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/scripts/SiteScrubber-AiO.meta.js
-// @downloadURL  https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/scripts/SiteScrubber-AiO.user.js
+// @updateURL    https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/dist/SiteScrubber-AiO.meta.js
+// @downloadURL  https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/dist/SiteScrubber-AiO.user.js
 // @include      /^(?:https?:\/\/)?(?:www\.)?dropapk\.(to|com)\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?drop\.download\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?mixloads\.com//
