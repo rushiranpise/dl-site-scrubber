@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    PrimePlaya24
-// @version      2.0.0b3
+// @version      2.0.0b4
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -10,6 +10,10 @@
 // @supportURL   https://github.com/PrimePlaya24/dl-site-scrubber/issues
 // @updateURL    https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/dist/SiteScrubber.meta.js
 // @downloadURL  https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/dist/SiteScrubber.user.js
+// @compatible   firefox Violentmonkey
+// @compatible   firefox Tampermonkey
+// @compatible   chrome Violentmonkey
+// @compatible   chrome Tampermonkey
 // @include      /^(?:https?:\/\/)?(?:www\.)?dropapk\.(to|com)\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?drop\.download\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?mixloads\.com//
@@ -1585,6 +1589,84 @@ const siteRules = {
       //   this.$("#admaven_popup")?.setAttribute("value", "1");
       // }
 
+      if (1) {
+        const adChecks = `<ins class="adsbygoogle adsbygoogle-noablate" data-adsbygoogle-status="done" style="display: none !important;" data-ad-status="unfilled"><ins id="aswift_0_expand" tabindex="0" title="Advertisement" aria-label="Advertisement" style="border: none; height: 0px; width: 0px; margin: 0px; padding: 0px; position: relative; visibility: visible; background-color: transparent; display: inline-table;"><ins id="aswift_0_anchor" style="border: none; height: 0px; width: 0px; margin: 0px; padding: 0px; position: relative; visibility: visible; background-color: transparent; display: block;"><iframe id="aswift_0" name="aswift_0" style="left:0;position:absolute;top:0;border:0;width:undefinedpx;height:undefinedpx;" sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation" frameborder="0" src="https://googleads.g.doubleclick.net/pagead/ads?client=ca-pub-6572127804953403&amp;output=html&amp;adk=1812271804&amp;adf=3025194257&amp;lmt=1633100775&amp;plat=2%3A16777216%2C3%3A32%2C4%3A32%2C16%3A8388608%2C17%3A32%2C24%3A32%2C25%3A32%2C32%3A32&amp;format=0x0&amp;url=https%3A%2F%2Ffinancemonk.net%2F&amp;ea=0&amp;flash=0&amp;pra=5&amp;wgl=1&amp;uach=WyJBbmRyb2lkIiwiMTAuMC4wIiwiIiwiU00tRzk2MFUxIiwiOTQuMC40NjA2LjU2IixbXSxudWxsLG51bGwsIiJd&amp;dt=1633100774994&amp;bpp=5&amp;bdt=218&amp;idt=26&amp;shv=r20210927&amp;mjsv=m202109240101&amp;ptt=9&amp;saldr=aa&amp;abxe=1&amp;cookie=ID%3D56b750e26beff53c-22055315dbca0007%3AT%3D1633096313%3ART%3D1633096313%3AS%3DALNI_Ma5q7Vv6dbrwy1vOYvLJ2E8WQeRlA&amp;nras=1&amp;correlator=5395437289419&amp;frm=20&amp;pv=2&amp;ga_vid=1679006587.1633100775&amp;ga_sid=1633100775&amp;ga_hid=781536601&amp;ga_fc=0&amp;u_tz=-300&amp;u_his=3&amp;u_h=740&amp;u_w=360&amp;u_ah=740&amp;u_aw=360&amp;u_cd=24&amp;u_java=0&amp;u_nplug=0&amp;u_nmime=0&amp;adx=-12245933&amp;ady=-12245933&amp;biw=360&amp;bih=660&amp;scr_x=0&amp;scr_y=0&amp;eid=31062937%2C31062311&amp;oid=3&amp;pvsid=4344667839301295&amp;pem=875&amp;ref=https%3A%2F%2Fwww.google.com%2F&amp;eae=2&amp;fc=1920&amp;brdim=0%2C0%2C0%2C0%2C360%2C0%2C360%2C660%2C360%2C660&amp;vis=1&amp;rsz=%7C%7Cs%7C&amp;abl=NS&amp;fu=32768&amp;bc=31&amp;ifi=1&amp;uci=a!1&amp;fsb=1&amp;dtd=50" marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" scrolling="no" allowfullscreen="true" data-google-container-id="a!1" data-load-complete="true"></iframe></ins></ins></ins><ins class="adsbygoogle adsbygoogle-noablate" style="display: none !important; width: 100vw !important; height: 100vh !important; inset: 0px auto auto 0px !important; clear: none !important; float: none !important; margin: 0px !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; padding: 0px !important; position: fixed !important; vertical-align: baseline !important; visibility: visible !important; z-index: 2147483647 !important; background: transparent !important;" data-adsbygoogle-status="done" aria-hidden="true" data-ad-status="filled" data-vignette-loaded="true"><ins id="aswift_1_expand" tabindex="0" title="Advertisement" aria-label="Advertisement" style="border: none !important; height: 100vh !important; width: 100vw !important; margin: 0px !important; padding: 0px !important; position: relative !important; visibility: visible !important; background-color: transparent !important; display: inline-table !important; inset: auto !important; clear: none !important; float: none !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; vertical-align: baseline !important; z-index: auto !important;"><ins id="aswift_1_anchor" style="border: none !important; height: 100vh !important; width: 100vw !important; margin: 0px !important; padding: 0px !important; position: relative !important; visibility: visible !important; background-color: transparent !important; display: block !important; inset: auto !important; clear: none !important; float: none !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; vertical-align: baseline !important; z-index: auto !important;"><iframe id="aswift_1" name="" sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation" width="" height="" frameborder="0" src="https://googleads.g.doubleclick.net/pagead/html/r20210927/r20110914/zrt_lookup.html?fsb=1#RS-0-&amp;adk=1812271808&amp;client=ca-pub-6572127804953403&amp;fa=8&amp;ifi=2&amp;uci=a!2" marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" scrolling="no" allowfullscreen="true" style="width: 100vw !important; height: 100vh !important; inset: 0px auto auto 0px !important; position: absolute !important; clear: none !important; display: inline !important; float: none !important; margin: 0px !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; padding: 0px !important; vertical-align: baseline !important; visibility: visible !important; z-index: auto !important;" data-google-container-id="a!2" data-google-query-id="CLj8vrq-qfMCFWxkFQgd5PsNFA" data-load-complete="true"></iframe></ins></ins></ins>[scr=https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202109240101/reactive_library_fy2019.js][scr=https://www.googletagservices.com/activeview/js/current/osd.js][scr=https://partner.googleadservices.com/gampad/cookie.js?domain=financemonk.net&callback=_gfp_s_&client=ca-pub-6572127804953403&cookie=ID%3D56b750e26beff53c-22055315dbca0007%3AT%3D1633096313%3ART%3D1633096313%3AS%3DALNI_Ma5q7Vv6dbrwy1vOYvLJ2E8WQeRlA][scr=https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202109240101/show_ads_impl_fy2019.js][scr=https://static.cloudflareinsights.com/beacon.min.js][scr=https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js][scr=/cdn-cgi/challenge-platform/h/g/scripts/invisible.js][scr=https://adservice.google.com/adsid/integrator.js?domain=financemonk.net][scr=//salutationcheerlessdemote.com/sfp.js][scr=https://adservice.google.com/adsid/integrator.js?domain=financemonk.net][scr=//housewifehaunted.com/4f/b9/d6/4fb9d6755e5818e2fb1ce2f1b6bbd2a5.js][scr=https://tmp.dropgalaxy.in/adspopup.js][scr=https://tmp.dropgalaxy.in/adddds.js?v=1.0]`;
+
+        const usr = [...this.$$("body > script")]
+          .find((e) => e.innerHTML.match(/despacito/))
+          ?.innerHTML?.match(/(\[usr=[^\]]+\])/g)?.[0];
+
+        const advertisingCheckLink = [...this.$$("body > script")]
+          .find((e) =>
+            e.innerHTML.match(/https:\/\/tmp.dropgalaxy.in\/advertisement\//)
+          )
+          ?.innerHTML?.match(
+            /src="(https:\/\/tmp.dropgalaxy.in\/advertisement\/[^"]+)/
+          )?.[1];
+        const customPayload = `[download adguard unlocked version][LODA-LELO][despacito][rrrr][rand=][id=${
+          this.$("#fileid")?.value
+        }][dropgalaxyisbest=0][adblock_detected=1][downloadhash=][downloadhashad=1]${usr}${adChecks}`;
+
+        const iframeAd = document.createElement("iframe");
+        iframeAd.src = advertisingCheckLink;
+        iframeAd.style.display = "none";
+        document.body.appendChild(iframeAd);
+
+        const overallEncoder = (str) => {
+          let buf = new ArrayBuffer(str.length * 2);
+          let bufView = new Uint8Array(buf);
+          for (let i = 0, strLen = str.length; i < strLen; i++) {
+            bufView[i] = str.charCodeAt(i);
+          }
+          encoded_string = buf;
+
+          // var encoded_string = encoder(coded_string);
+          const uint8array_of_encoded_string = new Uint8Array(encoded_string);
+          const encoded_message = uint8array_of_encoded_string
+            .toString()
+            .replace(/2|3|7|,0,0,0/g, (res) => {
+              return { 2: "004", 3: "005", 7: "007", ",0,0,0": "" }[res];
+            });
+          return encoded_message;
+        };
+
+        this.sleep(1500).then(() => {
+          fetch("https://tmp.dropgalaxy.in/gettoken.php", {
+            headers: {
+              accept: "*/*",
+              "accept-language": "en-US,en;q=0.9",
+              "content-type":
+                "application/x-www-form-urlencoded; charset=UTF-8",
+              "sec-ch-ua": '";Not A Brand";v="99", "Chromium";v="94"',
+              "sec-ch-ua-mobile": "?1",
+              "sec-ch-ua-platform": '"Android"',
+              "sec-fetch-dest": "empty",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-site": "cross-site",
+            },
+            referrer: "https://financemonk.net/",
+            referrerPolicy: "strict-origin-when-cross-origin",
+            body: `rand=&msg=${encodeURIComponent(
+              overallEncoder(customPayload)
+            )}`,
+            method: "POST",
+            mode: "cors",
+            credentials: "omit",
+          })
+            .then((res) => res.text())
+            .then((xd) => {
+              const target = this.$("input[name='xd']");
+              target.id = "xdd";
+              target.value = xd;
+              this.log(xd);
+              iframeAd.remove();
+            })
+            .catch((err) => {
+              this.logDebugNaked(err);
+              this.log("Failed to simulate GetToken");
+            });
+        });
+      }
       this.interceptAJAX(function (args) {
         const ajaxOptions = arguments?.[0];
         if (ajaxOptions?.url?.match(/userusage/gi)) {
@@ -5602,7 +5684,7 @@ const siteRules = {
       ".reportfile",
       "#downloadBtnClick",
       "table",
-      "center"
+      "center",
     ],
     removeByRegex: [],
     hideElements: undefined,
@@ -5674,23 +5756,31 @@ const siteRules = {
       "google_image_requests",
     ],
     addInfoBanner: [
-      {targetElement: ".mngez_downloadpage1", where:"beforeend"},
-      {targetElement: "#mngez_download2", where:"beforeend"}
+      { targetElement: ".mngez_downloadpage1", where: "beforeend" },
+      { targetElement: "#mngez_download2", where: "beforeend" },
     ],
     modifyButtons: [
-      ["#downloadbtn", {requiresCaptcha: true, requiresTimer: true, makeListener: true}],
-      ["#direct_link > a", {replaceWithForm: true, customText: "Start Download"}],
+      [
+        "#downloadbtn",
+        { requiresCaptcha: true, requiresTimer: true, makeListener: true },
+      ],
+      [
+        "#direct_link > a",
+        { replaceWithForm: true, customText: "Start Download" },
+      ],
     ],
-    createCountdown: {element: ".seconds"},
+    createCountdown: { element: ".seconds" },
     customScript() {
-      this.$$(".col-md-8, .col-lg-8, .col-md-6, .col-lg-6, .col-md-4, .col-lg-4").forEach((el) => {
+      this.$$(
+        ".col-md-8, .col-lg-8, .col-md-6, .col-lg-6, .col-md-4, .col-lg-4"
+      ).forEach((el) => {
         el.classList.replace("col-lg-4", "col-lg-12");
         el.classList.replace("col-lg-6", "col-lg-12");
         el.classList.replace("col-lg-8", "col-lg-12");
         el.classList.replace("col-md-4", "col-md-12");
         el.classList.replace("col-md-6", "col-md-12");
         el.classList.replace("col-md-8", "col-md-12");
-      })
+      });
     },
   },
   filerio: {
@@ -5698,51 +5788,72 @@ const siteRules = {
     customStyle: `html,body,.bg-white,.download_box{background:#121212!important;color:#dfdfdf!important}.download_box{display:flex!important;flex-direction:column!important;align-items:center!important;border:unset!important;}`,
     downloadPageCheckBySelector: ["input[name='method_free']", ".download_box"],
     downloadPageCheckByRegex: [],
-    remove: ["nav", "body > div.container.py-5", "footer", "br", ".features__section", ".sharetabs", "#content"],
+    remove: [
+      "nav",
+      "body > div.container.py-5",
+      "footer",
+      "br",
+      ".features__section",
+      ".sharetabs",
+      "#content",
+    ],
     removeByRegex: [],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      'setPagination',
-      '_gaq',
-      '_gat',
-      'gaGlobal',
-      'BuildButtons',
-      '__core-js_shared__',
-      'feather',
-      'LAST_CORRECT_EVENT_TIME',
-      '_533899577',
-      '_2984300562',
-      'iinf',
-      'delComment',
-      'player_start',
-      'showFullScreen',
-      'closure_lm_672589',
-      'setCookie',
-      'getCookie',
-      'eraseCookie',
-      'keepID'
+      "setPagination",
+      "_gaq",
+      "_gat",
+      "gaGlobal",
+      "BuildButtons",
+      "__core-js_shared__",
+      "feather",
+      "LAST_CORRECT_EVENT_TIME",
+      "_533899577",
+      "_2984300562",
+      "iinf",
+      "delComment",
+      "player_start",
+      "showFullScreen",
+      "closure_lm_672589",
+      "setCookie",
+      "getCookie",
+      "eraseCookie",
+      "keepID",
     ],
     addInfoBanner: [
-      {targetElement: "form:not([name='F1'])"},
-      {targetElement: ".download_box"}
+      { targetElement: "form:not([name='F1'])" },
+      { targetElement: ".download_box" },
     ],
     modifyButtons: [
-      ["form:not([name='F1']) input[name='method_free']", {replaceWithTag: "button", customText: "Free Download"}],
-      ["button#downloadbtn", {replaceWithTag: "button", requiresCaptcha:true, makeListener: true, customText: "Create Download Link"}],
-      [".download_box > a", {replaceWithForm: true}],
+      [
+        "form:not([name='F1']) input[name='method_free']",
+        { replaceWithTag: "button", customText: "Free Download" },
+      ],
+      [
+        "button#downloadbtn",
+        {
+          replaceWithTag: "button",
+          requiresCaptcha: true,
+          makeListener: true,
+          customText: "Create Download Link",
+        },
+      ],
+      [".download_box > a", { replaceWithForm: true }],
     ],
     createCountdown: "",
     customScript() {
-      this.$$(".col-md-8, .col-lg-8, .col-md-6, .col-lg-6, .col-md-4, .col-lg-4").forEach((el) => {
+      this.$$(
+        ".col-md-8, .col-lg-8, .col-md-6, .col-lg-6, .col-md-4, .col-lg-4"
+      ).forEach((el) => {
         el.classList.replace("col-lg-4", "col-lg-12");
         el.classList.replace("col-lg-6", "col-lg-12");
         el.classList.replace("col-lg-8", "col-lg-12");
         el.classList.replace("col-md-4", "col-md-12");
         el.classList.replace("col-md-6", "col-md-12");
         el.classList.replace("col-md-8", "col-md-12");
-      })
+      });
     },
   },
   filelox: {
@@ -5750,25 +5861,294 @@ const siteRules = {
     customStyle: `html,body,.file-info,h4{background:#121212!important;color:#dfdfdf!important}`,
     downloadPageCheckBySelector: ["#btn_method_free", "#downloadbtn"],
     downloadPageCheckByRegex: [],
-    remove: ["nav", "footer", ".download-page > center",
-    ".table-download table tr:nth-child(-n+10)",
-    "#btn_method_premium",
-    "#btn_method_free ~ *",
-    "td.descr",
-    ".promo-container",
-    ".report-abuse"
-  ],
+    remove: [
+      "nav",
+      "footer",
+      ".download-page > center",
+      ".table-download table tr:nth-child(-n+10)",
+      "#btn_method_premium",
+      "#btn_method_free ~ *",
+      "td.descr",
+      ".promo-container",
+      ".report-abuse",
+    ],
     removeByRegex: [],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
-    destroyWindowFunctions: ["_gaq","setPagination","atOptions","_gat","gaGlobal","delComment","player_start","timeout","k","_v551ygr5lqm","0z1mjv6rdbkr","zfgformats","setImmediate","clearImmediate","_joetzrvb","_gapnvzv","clipboard","_Hasync","chfh","chfh2","_HST_cntval","Histats","webpushlogs","initIPP","_HistatsCounterGraphics_9_setValues","_value_RETURN_BUILDER","_HistatsCounterGraphics_9","histats_canvascounters_base.js","a","cv","Tynt","_dtspv","_33Across","__uspapi","__connect","lotame_3825","char","lotameIsCompatible","lt3825_ba","lt3825_b","lt3825_c","lt3825_ca","lt3825_d","lt3825_e","lt3825_da","lt3825_ea","lt3825_fa","lt3825_","lt3825_4","lt3825_aa","lt3825_a","lt3825_f","lt3825_g","lt3825_h","lt3825_i","lt3825_j","lt3825_l","lt3825_ga","lt3825_k","lt3825_m","lt3825_n","lt3825_o","lt3825_p","lt3825_q","lt3825_r","lt3825_s","lt3825_t","lt3825_u","lt3825_ha","lt3825_ia","lt3825_w","lt3825_ja","lt3825_x","lt3825_y","lt3825_v","lt3825_z","lt3825_A","lt3825_B","lt3825_C","lt3825_D","lt3825_E","lt3825_F","lt3825_G","lt3825_H","lt3825_I","lt3825_J","lt3825_L","lt3825_M","lt3825_N","lt3825_K","lt3825_ka","lt3825_la","lt3825_P","lt3825_O","lt3825_Q","lt3825_R","lt3825_S","lt3825_T","lt3825_ma","lt3825_na","lt3825_oa","lt3825_pa","lt3825_U","lt3825_V","lt3825_W","lt3825_qa","lt3825_sa","lt3825_ra","lt3825_X","lt3825_ta","lt3825_ua","lt3825_Y","lt3825_Z","lt3825__","lt3825_va","lt3825_wa","lt3825_xa","lt3825_ya","lt3825_0","lt3825_za","lt3825_Aa","lt3825_Ba","lt3825_1","lt3825_Da","lt3825_Ca","lt3825_Ea","lt3825_Fa","lt3825_Ga","lt3825_Ha","lt3825_2","lt3825_3","lt3825_Ia","lt3825_Ja","lt3825_Ka","lt3825_La","lt3825_Ma","lt3825_Na","lt3825_Oa","lt3825_Pa","lt3825_Qa","lt3825_5","lt3825_6","lt3825_Ta","lt3825_Ua","lt3825_Sa","lt3825_Ra","lt3825_Wa","lt3825_Va","lt3825_Ya","lt3825_Xa","lt3825_7","lt3825_Za","lt3825__a","lt3825_0a","lt3825_1a","lt3825_2a","lt3825_4a","lt3825_7a","lt3825_6a","lt3825_3a","lt3825_9a","lt3825_5a","lt3825_8a","lt3825_ab","lt3825_$a","lt3825_bb","lt3825_8","lt3825_cb","lt3825_db","lt3825_eb","lt3825_fb","lt3825_gb","lt3825_hb","lt3825_ib","lt3825_kb","lt3825_$","lt3825_jb","lt3825_lb","lt3825_9","_pop","p$00a","_0x5d4b","_0x208c","p$00a1633309931319zz","decrypt","w71111","K5gg","w2r","s5gg","handleException","B6cc","g6cc","x6cc","z3xx","c3xx","k3xx","T9II","_cl6rbagn4kl6817yb9eplb","__abstract","__optimize","__residual","_clkqnea5gc6mdf08c08j2z","_clhqo2t2gmc5p1amjisyc7","detectZoom","iframe","where","win","_pao","popns","pop_cdn","d7RR","k7RR","n7RR","N6CC","f6CC","y6CC","b133","IOarzRhPlP","x1FF","b1FF","n1FF","w922","h922","P922","$jscomp","$jscomp$lookupPolyfilledValue","AdscoreInit","pako","txt","ed","t","property","brand","r","g","b","bt"],
-    addInfoBanner: [],
-    modifyButtons: [
-      ["#btn_method_free", {replaceWithTag:"button", customText: "Free Download"}],
-      ["#downloadbtn", {requiresTimer:true, customText: "Start Download", props: {type: "submit"}}],
+    destroyWindowFunctions: [
+      "_gaq",
+      "setPagination",
+      "atOptions",
+      "_gat",
+      "gaGlobal",
+      "delComment",
+      "player_start",
+      "timeout",
+      "k",
+      "_v551ygr5lqm",
+      "0z1mjv6rdbkr",
+      "zfgformats",
+      "setImmediate",
+      "clearImmediate",
+      "_joetzrvb",
+      "_gapnvzv",
+      "clipboard",
+      "_Hasync",
+      "chfh",
+      "chfh2",
+      "_HST_cntval",
+      "Histats",
+      "webpushlogs",
+      "initIPP",
+      "_HistatsCounterGraphics_9_setValues",
+      "_value_RETURN_BUILDER",
+      "_HistatsCounterGraphics_9",
+      "histats_canvascounters_base.js",
+      "a",
+      "cv",
+      "Tynt",
+      "_dtspv",
+      "_33Across",
+      "__uspapi",
+      "__connect",
+      "lotame_3825",
+      "char",
+      "lotameIsCompatible",
+      "lt3825_ba",
+      "lt3825_b",
+      "lt3825_c",
+      "lt3825_ca",
+      "lt3825_d",
+      "lt3825_e",
+      "lt3825_da",
+      "lt3825_ea",
+      "lt3825_fa",
+      "lt3825_",
+      "lt3825_4",
+      "lt3825_aa",
+      "lt3825_a",
+      "lt3825_f",
+      "lt3825_g",
+      "lt3825_h",
+      "lt3825_i",
+      "lt3825_j",
+      "lt3825_l",
+      "lt3825_ga",
+      "lt3825_k",
+      "lt3825_m",
+      "lt3825_n",
+      "lt3825_o",
+      "lt3825_p",
+      "lt3825_q",
+      "lt3825_r",
+      "lt3825_s",
+      "lt3825_t",
+      "lt3825_u",
+      "lt3825_ha",
+      "lt3825_ia",
+      "lt3825_w",
+      "lt3825_ja",
+      "lt3825_x",
+      "lt3825_y",
+      "lt3825_v",
+      "lt3825_z",
+      "lt3825_A",
+      "lt3825_B",
+      "lt3825_C",
+      "lt3825_D",
+      "lt3825_E",
+      "lt3825_F",
+      "lt3825_G",
+      "lt3825_H",
+      "lt3825_I",
+      "lt3825_J",
+      "lt3825_L",
+      "lt3825_M",
+      "lt3825_N",
+      "lt3825_K",
+      "lt3825_ka",
+      "lt3825_la",
+      "lt3825_P",
+      "lt3825_O",
+      "lt3825_Q",
+      "lt3825_R",
+      "lt3825_S",
+      "lt3825_T",
+      "lt3825_ma",
+      "lt3825_na",
+      "lt3825_oa",
+      "lt3825_pa",
+      "lt3825_U",
+      "lt3825_V",
+      "lt3825_W",
+      "lt3825_qa",
+      "lt3825_sa",
+      "lt3825_ra",
+      "lt3825_X",
+      "lt3825_ta",
+      "lt3825_ua",
+      "lt3825_Y",
+      "lt3825_Z",
+      "lt3825__",
+      "lt3825_va",
+      "lt3825_wa",
+      "lt3825_xa",
+      "lt3825_ya",
+      "lt3825_0",
+      "lt3825_za",
+      "lt3825_Aa",
+      "lt3825_Ba",
+      "lt3825_1",
+      "lt3825_Da",
+      "lt3825_Ca",
+      "lt3825_Ea",
+      "lt3825_Fa",
+      "lt3825_Ga",
+      "lt3825_Ha",
+      "lt3825_2",
+      "lt3825_3",
+      "lt3825_Ia",
+      "lt3825_Ja",
+      "lt3825_Ka",
+      "lt3825_La",
+      "lt3825_Ma",
+      "lt3825_Na",
+      "lt3825_Oa",
+      "lt3825_Pa",
+      "lt3825_Qa",
+      "lt3825_5",
+      "lt3825_6",
+      "lt3825_Ta",
+      "lt3825_Ua",
+      "lt3825_Sa",
+      "lt3825_Ra",
+      "lt3825_Wa",
+      "lt3825_Va",
+      "lt3825_Ya",
+      "lt3825_Xa",
+      "lt3825_7",
+      "lt3825_Za",
+      "lt3825__a",
+      "lt3825_0a",
+      "lt3825_1a",
+      "lt3825_2a",
+      "lt3825_4a",
+      "lt3825_7a",
+      "lt3825_6a",
+      "lt3825_3a",
+      "lt3825_9a",
+      "lt3825_5a",
+      "lt3825_8a",
+      "lt3825_ab",
+      "lt3825_$a",
+      "lt3825_bb",
+      "lt3825_8",
+      "lt3825_cb",
+      "lt3825_db",
+      "lt3825_eb",
+      "lt3825_fb",
+      "lt3825_gb",
+      "lt3825_hb",
+      "lt3825_ib",
+      "lt3825_kb",
+      "lt3825_$",
+      "lt3825_jb",
+      "lt3825_lb",
+      "lt3825_9",
+      "_pop",
+      "p$00a",
+      "_0x5d4b",
+      "_0x208c",
+      "p$00a1633309931319zz",
+      "decrypt",
+      "w71111",
+      "K5gg",
+      "w2r",
+      "s5gg",
+      "handleException",
+      "B6cc",
+      "g6cc",
+      "x6cc",
+      "z3xx",
+      "c3xx",
+      "k3xx",
+      "T9II",
+      "_cl6rbagn4kl6817yb9eplb",
+      "__abstract",
+      "__optimize",
+      "__residual",
+      "_clkqnea5gc6mdf08c08j2z",
+      "_clhqo2t2gmc5p1amjisyc7",
+      "detectZoom",
+      "iframe",
+      "where",
+      "win",
+      "_pao",
+      "popns",
+      "pop_cdn",
+      "d7RR",
+      "k7RR",
+      "n7RR",
+      "N6CC",
+      "f6CC",
+      "y6CC",
+      "b133",
+      "IOarzRhPlP",
+      "x1FF",
+      "b1FF",
+      "n1FF",
+      "w922",
+      "h922",
+      "P922",
+      "$jscomp",
+      "$jscomp$lookupPolyfilledValue",
+      "AdscoreInit",
+      "pako",
+      "txt",
+      "ed",
+      "t",
+      "property",
+      "brand",
+      "r",
+      "g",
+      "b",
+      "bt",
+      "_0x173b",
+      "_0x2697",
+      "LieDetector",
+      "atAsyncContainers",
+      "_0x126d",
+      "_0x16be",
+      "_0x5c7565",
+      "mm",
+      "AaDetector",
+      "placementKey",
+      "rp",
+      "_0x5133",
+      "_0x1351",
+      "_0x1b79d4",
+      "_0xa6ab",
+      "_0x41de",
+      "sdif2zyaz1o",
     ],
-    createCountdown: {element:".seconds"},
+    addInfoBanner: [{ targetElement: "#container" }],
+    modifyButtons: [
+      [
+        "#btn_method_free",
+        { replaceWithTag: "button", customText: "Free Download" },
+      ],
+      [
+        "#downloadbtn",
+        {
+          requiresTimer: true,
+          makeListener: true,
+          customText: "Start Download",
+          props: { type: "submit" },
+        },
+      ],
+    ],
+    createCountdown: { element: ".seconds" },
     customScript() {},
   },
   ddownload: {
@@ -5776,15 +6156,28 @@ const siteRules = {
     customStyle: `html,body,.file-info,h4{background:#121212!important;color:#dfdfdf!important}`,
     downloadPageCheckBySelector: ["#downloadbtn", ".download-page"],
     downloadPageCheckByRegex: [],
-    remove: ["nav", "footer", ".plans-wrapper", ".plan-header", ".report-abuse"],
+    remove: [
+      "nav",
+      "footer",
+      ".plans-wrapper",
+      ".plan-header",
+      ".report-abuse",
+    ],
     removeByRegex: [],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [],
-    addInfoBanner: [],
+    addInfoBanner: [{ targetElement: "#container" }],
     modifyButtons: [
-      ["#downloadbtn", {requiresCaptcha:true, makeListener: true, customText: "Create Download Link"}]
+      [
+        "#downloadbtn",
+        {
+          requiresCaptcha: true,
+          makeListener: true,
+          customText: "Create Download Link",
+        },
+      ],
     ],
     createCountdown: "",
     customScript() {},
