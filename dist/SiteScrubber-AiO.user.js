@@ -1,15 +1,15 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    PrimePlaya24
-// @version      2.0.0b4
+// @version      2.0.0b5
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
-// @icon         https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/assets/icons/SiteScrubber-aio_icon.png
+// @icon         https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/assets/icons/SiteScrubber-aio_icon.png
 // @homepageURL  https://github.com/PrimePlaya24/dl-site-scrubber
 // @supportURL   https://github.com/PrimePlaya24/dl-site-scrubber/issues
-// @updateURL    https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/dist/SiteScrubber.meta.js
-// @downloadURL  https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/dist/SiteScrubber.user.js
+// @updateURL    https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/dist/SiteScrubber-AiO.meta.js
+// @downloadURL  https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/dist/SiteScrubber-AiO.user.js
 // @compatible   firefox Violentmonkey
 // @compatible   firefox Tampermonkey
 // @compatible   chrome Violentmonkey
@@ -5547,7 +5547,7 @@ const siteRules = {
   },
   nitro: {
     host: ["nitro.download"],
-    customStyle: `html,body,#container,legend,#view,h1{background:#121212!important;color:#dfdfdf!important}#container{box-shadow:unset!important}a{color:#3096fb!important}`,
+    customStyle: `html,body,#container,legend,#view,h1{background:#121212!important;color:#dfdfdf!important}#container{box-shadow:unset!important}a{color:#3096fb!important}#beforeReCaptcha{font-size:28px!important;}`,
     downloadPageCheckBySelector: ["button#slow-download", "#startFreeDownload"],
     downloadPageCheckByRegex: [],
     remove: [
@@ -5582,7 +5582,7 @@ const siteRules = {
       // "fileId",
       "url",
       // "startFreeDownload",
-      "setCookie",
+      // "setCookie",
       "swfobject",
       "RandHash2",
       "lang",
@@ -5635,32 +5635,100 @@ const siteRules = {
       ["button#slow-download"],
       [
         "button#sendReCaptcha",
-        { customText: "Free Download", requiresCaptcha: true },
+        {
+          customText: "Free Download",
+          requiresCaptcha: true,
+          requiresTimer: true,
+          makeListener: true,
+          eventHandlers: {
+            click(e) {
+              e.preventDefault();
+              if (!this.classList.contains("ss-btn-ready")) {
+                return;
+              }
+              fetch("https://nitro.download/ajax/freeDownload.php", {
+                headers: {
+                  accept: "*/*",
+                  "accept-language": "en-US,en;q=0.9",
+                  "content-type":
+                    "application/x-www-form-urlencoded; charset=UTF-8",
+                  "sec-fetch-dest": "empty",
+                  "sec-fetch-mode": "cors",
+                  "sec-fetch-site": "same-origin",
+                  "x-requested-with": "XMLHttpRequest",
+                },
+                body: `method=fetchDownload&g-recaptcha-response=${window?.hcaptcha?.getResponse?.()}&h-captcha-response=${window?.hcaptcha?.getResponse?.()}`,
+                method: "POST",
+                mode: "cors",
+                credentials: "include",
+              })
+                .then((res) => res.text())
+                .then((anchor) => {
+                  const dl_link = anchor.match(/"(https:\/\/[^"]+)"/)?.[1];
+                  if (dl_link) {
+                    document.querySelector("#cpatchaAndButton").innerHTML = "";
+                    document
+                      .querySelector("#cpatchaAndButton")
+                      .insertAdjacentElement(
+                        "afterbegin",
+                        siteScrubber.makeSafeForm({ actionURL: dl_link })
+                      );
+                  } else {
+                    console.log("Failed to get dl_link", dl_link);
+                  }
+                });
+            },
+          },
+        },
       ],
-      ["button#beforeStartTimerBtn", { customText: "Start Timer" }],
+      // ["button#beforeStartTimerBtn", { customText: "Start Timer" }],
     ],
     customScript() {
+      if (this.$("#fileId")) {
+        const headers = {
+          accept: "*/*",
+          "accept-language": "en-US,en;q=0.9",
+          "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+          "sec-fetch-dest": "empty",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-site": "same-origin",
+          "x-requested-with": "XMLHttpRequest",
+        };
+        fetch("https://nitro.download/ajax/setCookie.php", {
+          headers: headers,
+          body: `fileId=${this.$("#fileId").value}`,
+          method: "POST",
+          mode: "cors",
+          credentials: "include",
+        }).then(() => {
+          fetch("https://nitro.download/ajax/freeDownload.php", {
+            headers: headers,
+            body: `method=startTimer&fileId=${this.$("#fileId").value}`,
+            method: "POST",
+            mode: "cors",
+            credentials: "include",
+          })
+            .then((res) => res.text())
+            .then((data) => {
+              if (data == "1") {
+                this.$(
+                  "#beforeReCaptcha"
+                ).innerHTML = `Wait <span class="seconds">120</span> seconds`;
+                this.createCountdown({ element: ".seconds" });
+              } else {
+                this.$("#beforeReCaptcha").innerHTML = data;
+              }
+            });
+        });
+      }
+
       this.waitUntilSelector("button#slow-download").then((btn) => {
         const form = btn.parentElement;
-        // btn = this.modifyButton(btn, {})
-        this.$("#container")?.insertAdjacentElement("afterbegin", form);
-        this.$("#container > .content")?.remove();
-      });
-      this.waitUntilSelector("form#startFreeDownload").then((form) => {
-        // btn = this.modifyButton(btn, {})
-        return;
-        form.style = "";
         this.$("#container")?.insertAdjacentElement("afterbegin", form);
         this.$("#container > .content")?.remove();
       });
       this.waitUntilSelector("#reCaptcha").then((div) => {
         div.style = "";
-      });
-      this.waitUntilSelector("a#download").then((btn) => {
-        this.modifyButton(btn, {
-          replaceWithForm: true,
-          customText: "Start Download",
-        });
       });
     },
   },

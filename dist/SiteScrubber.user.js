@@ -1,15 +1,19 @@
 // ==UserScript==
-// @name         SiteScrubber - All-in-One
-// @namespace    SiteScrubber
-// @version      2.0.0-beta
-// @description  Scrub site of ugliness and ease the process of downloading from multiple sites!
+// @name         SiteScrubber
+// @namespace    PrimePlaya24
+// @version      2.0.0b5
+// @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
-// @icon         https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/icons/SiteScrubber-aio_icon.png
+// @icon         https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/assets/icons/SiteScrubber-aio_icon.png
 // @homepageURL  https://github.com/PrimePlaya24/dl-site-scrubber
 // @supportURL   https://github.com/PrimePlaya24/dl-site-scrubber/issues
-// @updateURL    https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/dist/SiteScrubber.meta.js
-// @downloadURL  https://raw.githubusercontent.com/PrimePlaya24/dl-site-scrubber/master/dist/SiteScrubber.user.js
+// @updateURL    https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/dist/SiteScrubber-AiO.meta.js
+// @downloadURL  https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/dist/SiteScrubber-AiO.user.js
+// @compatible   firefox Violentmonkey
+// @compatible   firefox Tampermonkey
+// @compatible   chrome Violentmonkey
+// @compatible   chrome Tampermonkey
 // @include      /^(?:https?:\/\/)?(?:www\.)?dropapk\.(to|com)\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?drop\.download\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?mixloads\.com//
@@ -45,6 +49,11 @@
 // @include      /^(?:https?:\/\/)?(?:www\.)?fastclick\.to\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?chedrive\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?nitro\.download\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?checkurl\.(org|me)\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?intoupload\.net\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?filerio\.in\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?filelox\.com\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?ddownload\.com\//
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
@@ -232,7 +241,11 @@ class SiteScrubber {
     [...elements].forEach((e) => {
       if (typeof e == "string" || e instanceof String) {
         // remove found elements
-        this.$$(e).forEach((ele) => ele.remove());
+        this.$$(e).forEach((ele) => {
+          if (!ele.querySelector(".g-recaptcha, .h-captcha")) {
+            ele.remove();
+          }
+        });
         // this.$$(e).forEach((ele) => (ele.style.display = "none"));
       } else if (e instanceof HTMLElement) {
         // remove HTMLElement
@@ -688,6 +701,7 @@ class SiteScrubber {
       "__recaptcha_api",
       "__google_recaptcha_client",
       "recaptcha",
+      "hcaptcha",
     ];
     for (const option of options) {
       // window[option] = function () {};
@@ -893,7 +907,7 @@ class SiteScrubber {
       const dl_link = button.href;
       if (
         this.window.location.href.match(/^https:/i) &&
-        !dl_link.match(/^https:/i)
+        dl_link.match(/^http:/i)
       ) {
         // https://blog.chromium.org/2020/02/protecting-users-from-insecure.html
         this.document.body.insertAdjacentHTML(
@@ -1011,9 +1025,10 @@ class SiteScrubber {
   }
   makeSafeForm({ actionURL, method = "GET", target = "_blank" }) {
     const form = this.document.createElement("form");
-    form.action = actionURL;
+    form.action = actionURL || "";
     form.method = method;
     form.target = target;
+    form.id = "ss-form";
 
     const submitBtn = this.document.createElement("button");
     submitBtn.type = "submit";
@@ -1574,6 +1589,84 @@ const siteRules = {
       //   this.$("#admaven_popup")?.setAttribute("value", "1");
       // }
 
+      if (1) {
+        const adChecks = `<ins class="adsbygoogle adsbygoogle-noablate" data-adsbygoogle-status="done" style="display: none !important;" data-ad-status="unfilled"><ins id="aswift_0_expand" tabindex="0" title="Advertisement" aria-label="Advertisement" style="border: none; height: 0px; width: 0px; margin: 0px; padding: 0px; position: relative; visibility: visible; background-color: transparent; display: inline-table;"><ins id="aswift_0_anchor" style="border: none; height: 0px; width: 0px; margin: 0px; padding: 0px; position: relative; visibility: visible; background-color: transparent; display: block;"><iframe id="aswift_0" name="aswift_0" style="left:0;position:absolute;top:0;border:0;width:undefinedpx;height:undefinedpx;" sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation" frameborder="0" src="https://googleads.g.doubleclick.net/pagead/ads?client=ca-pub-6572127804953403&amp;output=html&amp;adk=1812271804&amp;adf=3025194257&amp;lmt=1633100775&amp;plat=2%3A16777216%2C3%3A32%2C4%3A32%2C16%3A8388608%2C17%3A32%2C24%3A32%2C25%3A32%2C32%3A32&amp;format=0x0&amp;url=https%3A%2F%2Ffinancemonk.net%2F&amp;ea=0&amp;flash=0&amp;pra=5&amp;wgl=1&amp;uach=WyJBbmRyb2lkIiwiMTAuMC4wIiwiIiwiU00tRzk2MFUxIiwiOTQuMC40NjA2LjU2IixbXSxudWxsLG51bGwsIiJd&amp;dt=1633100774994&amp;bpp=5&amp;bdt=218&amp;idt=26&amp;shv=r20210927&amp;mjsv=m202109240101&amp;ptt=9&amp;saldr=aa&amp;abxe=1&amp;cookie=ID%3D56b750e26beff53c-22055315dbca0007%3AT%3D1633096313%3ART%3D1633096313%3AS%3DALNI_Ma5q7Vv6dbrwy1vOYvLJ2E8WQeRlA&amp;nras=1&amp;correlator=5395437289419&amp;frm=20&amp;pv=2&amp;ga_vid=1679006587.1633100775&amp;ga_sid=1633100775&amp;ga_hid=781536601&amp;ga_fc=0&amp;u_tz=-300&amp;u_his=3&amp;u_h=740&amp;u_w=360&amp;u_ah=740&amp;u_aw=360&amp;u_cd=24&amp;u_java=0&amp;u_nplug=0&amp;u_nmime=0&amp;adx=-12245933&amp;ady=-12245933&amp;biw=360&amp;bih=660&amp;scr_x=0&amp;scr_y=0&amp;eid=31062937%2C31062311&amp;oid=3&amp;pvsid=4344667839301295&amp;pem=875&amp;ref=https%3A%2F%2Fwww.google.com%2F&amp;eae=2&amp;fc=1920&amp;brdim=0%2C0%2C0%2C0%2C360%2C0%2C360%2C660%2C360%2C660&amp;vis=1&amp;rsz=%7C%7Cs%7C&amp;abl=NS&amp;fu=32768&amp;bc=31&amp;ifi=1&amp;uci=a!1&amp;fsb=1&amp;dtd=50" marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" scrolling="no" allowfullscreen="true" data-google-container-id="a!1" data-load-complete="true"></iframe></ins></ins></ins><ins class="adsbygoogle adsbygoogle-noablate" style="display: none !important; width: 100vw !important; height: 100vh !important; inset: 0px auto auto 0px !important; clear: none !important; float: none !important; margin: 0px !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; padding: 0px !important; position: fixed !important; vertical-align: baseline !important; visibility: visible !important; z-index: 2147483647 !important; background: transparent !important;" data-adsbygoogle-status="done" aria-hidden="true" data-ad-status="filled" data-vignette-loaded="true"><ins id="aswift_1_expand" tabindex="0" title="Advertisement" aria-label="Advertisement" style="border: none !important; height: 100vh !important; width: 100vw !important; margin: 0px !important; padding: 0px !important; position: relative !important; visibility: visible !important; background-color: transparent !important; display: inline-table !important; inset: auto !important; clear: none !important; float: none !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; vertical-align: baseline !important; z-index: auto !important;"><ins id="aswift_1_anchor" style="border: none !important; height: 100vh !important; width: 100vw !important; margin: 0px !important; padding: 0px !important; position: relative !important; visibility: visible !important; background-color: transparent !important; display: block !important; inset: auto !important; clear: none !important; float: none !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; vertical-align: baseline !important; z-index: auto !important;"><iframe id="aswift_1" name="" sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation" width="" height="" frameborder="0" src="https://googleads.g.doubleclick.net/pagead/html/r20210927/r20110914/zrt_lookup.html?fsb=1#RS-0-&amp;adk=1812271808&amp;client=ca-pub-6572127804953403&amp;fa=8&amp;ifi=2&amp;uci=a!2" marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" scrolling="no" allowfullscreen="true" style="width: 100vw !important; height: 100vh !important; inset: 0px auto auto 0px !important; position: absolute !important; clear: none !important; display: inline !important; float: none !important; margin: 0px !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; padding: 0px !important; vertical-align: baseline !important; visibility: visible !important; z-index: auto !important;" data-google-container-id="a!2" data-google-query-id="CLj8vrq-qfMCFWxkFQgd5PsNFA" data-load-complete="true"></iframe></ins></ins></ins>[scr=https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202109240101/reactive_library_fy2019.js][scr=https://www.googletagservices.com/activeview/js/current/osd.js][scr=https://partner.googleadservices.com/gampad/cookie.js?domain=financemonk.net&callback=_gfp_s_&client=ca-pub-6572127804953403&cookie=ID%3D56b750e26beff53c-22055315dbca0007%3AT%3D1633096313%3ART%3D1633096313%3AS%3DALNI_Ma5q7Vv6dbrwy1vOYvLJ2E8WQeRlA][scr=https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202109240101/show_ads_impl_fy2019.js][scr=https://static.cloudflareinsights.com/beacon.min.js][scr=https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js][scr=/cdn-cgi/challenge-platform/h/g/scripts/invisible.js][scr=https://adservice.google.com/adsid/integrator.js?domain=financemonk.net][scr=//salutationcheerlessdemote.com/sfp.js][scr=https://adservice.google.com/adsid/integrator.js?domain=financemonk.net][scr=//housewifehaunted.com/4f/b9/d6/4fb9d6755e5818e2fb1ce2f1b6bbd2a5.js][scr=https://tmp.dropgalaxy.in/adspopup.js][scr=https://tmp.dropgalaxy.in/adddds.js?v=1.0]`;
+
+        const usr = [...this.$$("body > script")]
+          .find((e) => e.innerHTML.match(/despacito/))
+          ?.innerHTML?.match(/(\[usr=[^\]]+\])/g)?.[0];
+
+        const advertisingCheckLink = [...this.$$("body > script")]
+          .find((e) =>
+            e.innerHTML.match(/https:\/\/tmp.dropgalaxy.in\/advertisement\//)
+          )
+          ?.innerHTML?.match(
+            /src="(https:\/\/tmp.dropgalaxy.in\/advertisement\/[^"]+)/
+          )?.[1];
+        const customPayload = `[download adguard unlocked version][LODA-LELO][despacito][rrrr][rand=][id=${
+          this.$("#fileid")?.value
+        }][dropgalaxyisbest=0][adblock_detected=1][downloadhash=][downloadhashad=1]${usr}${adChecks}`;
+
+        const iframeAd = document.createElement("iframe");
+        iframeAd.src = advertisingCheckLink;
+        iframeAd.style.display = "none";
+        document.body.appendChild(iframeAd);
+
+        const overallEncoder = (str) => {
+          let buf = new ArrayBuffer(str.length * 2);
+          let bufView = new Uint8Array(buf);
+          for (let i = 0, strLen = str.length; i < strLen; i++) {
+            bufView[i] = str.charCodeAt(i);
+          }
+          encoded_string = buf;
+
+          // var encoded_string = encoder(coded_string);
+          const uint8array_of_encoded_string = new Uint8Array(encoded_string);
+          const encoded_message = uint8array_of_encoded_string
+            .toString()
+            .replace(/2|3|7|,0,0,0/g, (res) => {
+              return { 2: "004", 3: "005", 7: "007", ",0,0,0": "" }[res];
+            });
+          return encoded_message;
+        };
+
+        this.sleep(1500).then(() => {
+          fetch("https://tmp.dropgalaxy.in/gettoken.php", {
+            headers: {
+              accept: "*/*",
+              "accept-language": "en-US,en;q=0.9",
+              "content-type":
+                "application/x-www-form-urlencoded; charset=UTF-8",
+              "sec-ch-ua": '";Not A Brand";v="99", "Chromium";v="94"',
+              "sec-ch-ua-mobile": "?1",
+              "sec-ch-ua-platform": '"Android"',
+              "sec-fetch-dest": "empty",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-site": "cross-site",
+            },
+            referrer: "https://financemonk.net/",
+            referrerPolicy: "strict-origin-when-cross-origin",
+            body: `rand=&msg=${encodeURIComponent(
+              overallEncoder(customPayload)
+            )}`,
+            method: "POST",
+            mode: "cors",
+            credentials: "omit",
+          })
+            .then((res) => res.text())
+            .then((xd) => {
+              const target = this.$("input[name='xd']");
+              target.id = "xdd";
+              target.value = xd;
+              this.log(xd);
+              iframeAd.remove();
+            })
+            .catch((err) => {
+              this.logDebugNaked(err);
+              this.log("Failed to simulate GetToken");
+            });
+        });
+      }
       this.interceptAJAX(function (args) {
         const ajaxOptions = arguments?.[0];
         if (ajaxOptions?.url?.match(/userusage/gi)) {
@@ -1735,7 +1828,7 @@ const siteRules = {
       "atrk",
       "closure_lm_524755",
     ],
-    addInfoBanner: [],
+    addInfoBanner: [{ targetElement: ".container", where: "beforeend" }],
     modifyButtons: [
       [
         "form:not([id]) input[name='method_free']",
@@ -1743,7 +1836,7 @@ const siteRules = {
           makeListener: true,
           replaceWithTag: "button",
           customText: "Free Download",
-          props: { onclick: "", style: "", type: "submit" }
+          props: { onclick: "", style: "", type: "submit" },
         },
       ],
       [
@@ -1755,7 +1848,7 @@ const siteRules = {
           replaceWithTag: "button",
           customText: "Free Download",
           props: { onclick: "", style: "", type: "submit" },
-          moveTo: {target:"form", position:"beforeend"}
+          moveTo: { target: "form", position: "beforeend" },
         },
       ],
       [
@@ -1803,7 +1896,152 @@ const siteRules = {
     hideElements: undefined,
     removeIFrames: true,
     removeDisabledAttr: false,
-    destroyWindowFunctions: ["gtag","dataLayer","adsbygoogle","setPagination","k","_fads8ba2j8","d8c1u8ijebf","zfgformats","setImmediate","clearImmediate","_qxifk","_gozxvbj","google_tag_manager","google_tag_data","GoogleAnalyticsObject","ga","share_facebook","share_twitter","share_gplus","share_vk","timeout","_0x173b","_0x2697","LieDetector","atAsyncContainers","delComment","player_start","showFullScreen","_srort75geef","_tjnfie","_rufpns","s65c","ClipboardJS","core","__core-js_shared__","feather","cookiesAgree","cStart","cEnd","aPPUReinitialization","sdk","closure_lm_401245","installOnFly","onClickTrigger","kkp4a5x5tv","zfgloadedpopup","zfgloadedpush","zfgloadedpushopt","zfgloadedpushcode","atOptions","_0x28f6","_0x3693","_0x196a1559e34586fdb","01rt97ea5ojs","_Hasync","a","b","network","_0xc3bd","google_js_reporting_queue","google_srt","google_logging_queue","google_ad_modifications","ggeac","google_measure_js_timing","google_reactive_ads_global_state","_gfp_a_","google_user_agent_client_hint","biz","random","referr","chfh","chfh2","_HST_cntval","Histats","node","LAST_CORRECT_EVENT_TIME","_3399814740","___FONT_AWESOME___","FontAwesomeConfig","FontAwesome","_HistatsCounterGraphics_0_setValues","adcode_count","post_sticky_handler","post_noads_handler","post_trackdata_handler","post_skin_handler","post_expandable_handler","post_pop_handler","post_interstitial_handler","post_native_handler","native_resize_handler","post_iframe_handler","ItemDataScript_parameter","ItemDataScript_parameter_new","ItemDataScript_parameter_seperate","aduid","pid","width","height","displaytype","responsive","block_id","adSectionWidth","page_meta_data","page_title","page_referrer","meta_description","meta_keywords","search_keywords","currently_rendered","currently_rendered_flag","currently_rendered_adunit","cpc_impression","cpm_impression","cpa_impression","cpd_impression","cpv_impression","html_impression","ret","iframe_src","iinf","cv","char","Tynt","_dtspv","__connect","_33Across","__uspapi","__underground","vglnk","__v5k","vl_cB","vl_disable","vglnk_16317554785726","vglnk_16317554785737","s","urlorigin","responsedata","cookie_content_value","cookie_content_data","q898n4064po","_2e7y9iqqgfb","ppuWasShownFor3968974"],
+    destroyWindowFunctions: [
+      "gtag",
+      "dataLayer",
+      "adsbygoogle",
+      "setPagination",
+      "k",
+      "_fads8ba2j8",
+      "d8c1u8ijebf",
+      "zfgformats",
+      "setImmediate",
+      "clearImmediate",
+      "_qxifk",
+      "_gozxvbj",
+      "google_tag_manager",
+      "google_tag_data",
+      "GoogleAnalyticsObject",
+      "ga",
+      "share_facebook",
+      "share_twitter",
+      "share_gplus",
+      "share_vk",
+      "timeout",
+      "_0x173b",
+      "_0x2697",
+      "LieDetector",
+      "atAsyncContainers",
+      "delComment",
+      "player_start",
+      "showFullScreen",
+      "_srort75geef",
+      "_tjnfie",
+      "_rufpns",
+      "s65c",
+      "ClipboardJS",
+      "core",
+      "__core-js_shared__",
+      "feather",
+      "cookiesAgree",
+      "cStart",
+      "cEnd",
+      "aPPUReinitialization",
+      "sdk",
+      "closure_lm_401245",
+      "installOnFly",
+      "onClickTrigger",
+      "kkp4a5x5tv",
+      "zfgloadedpopup",
+      "zfgloadedpush",
+      "zfgloadedpushopt",
+      "zfgloadedpushcode",
+      "atOptions",
+      "_0x28f6",
+      "_0x3693",
+      "_0x196a1559e34586fdb",
+      "01rt97ea5ojs",
+      "_Hasync",
+      "a",
+      "b",
+      "network",
+      "_0xc3bd",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_reactive_ads_global_state",
+      "_gfp_a_",
+      "google_user_agent_client_hint",
+      "biz",
+      "random",
+      "referr",
+      "chfh",
+      "chfh2",
+      "_HST_cntval",
+      "Histats",
+      "node",
+      "LAST_CORRECT_EVENT_TIME",
+      "_3399814740",
+      "___FONT_AWESOME___",
+      "FontAwesomeConfig",
+      "FontAwesome",
+      "_HistatsCounterGraphics_0_setValues",
+      "adcode_count",
+      "post_sticky_handler",
+      "post_noads_handler",
+      "post_trackdata_handler",
+      "post_skin_handler",
+      "post_expandable_handler",
+      "post_pop_handler",
+      "post_interstitial_handler",
+      "post_native_handler",
+      "native_resize_handler",
+      "post_iframe_handler",
+      "ItemDataScript_parameter",
+      "ItemDataScript_parameter_new",
+      "ItemDataScript_parameter_seperate",
+      "aduid",
+      "pid",
+      "width",
+      "height",
+      "displaytype",
+      "responsive",
+      "block_id",
+      "adSectionWidth",
+      "page_meta_data",
+      "page_title",
+      "page_referrer",
+      "meta_description",
+      "meta_keywords",
+      "search_keywords",
+      "currently_rendered",
+      "currently_rendered_flag",
+      "currently_rendered_adunit",
+      "cpc_impression",
+      "cpm_impression",
+      "cpa_impression",
+      "cpd_impression",
+      "cpv_impression",
+      "html_impression",
+      "ret",
+      "iframe_src",
+      "iinf",
+      "cv",
+      "char",
+      "Tynt",
+      "_dtspv",
+      "__connect",
+      "_33Across",
+      "__uspapi",
+      "__underground",
+      "vglnk",
+      "__v5k",
+      "vl_cB",
+      "vl_disable",
+      "vglnk_16317554785726",
+      "vglnk_16317554785737",
+      "s",
+      "urlorigin",
+      "responsedata",
+      "cookie_content_value",
+      "cookie_content_data",
+      "q898n4064po",
+      "_2e7y9iqqgfb",
+      "ppuWasShownFor3968974",
+    ],
     addInfoBanner: [
       { targetElement: "#container > div.container", where: "afterend" },
     ],
@@ -1819,9 +2057,14 @@ const siteRules = {
       ],
       [
         "button#downloadbtn",
-        { style: "", makeListener: true, requiresCaptcha: true, requiresTimer: true },
+        {
+          style: "",
+          makeListener: true,
+          requiresCaptcha: true,
+          requiresTimer: true,
+        },
       ],
-      [".download-button > a", {replaceWithForm: true}]
+      [".download-button > a", { replaceWithForm: true }],
     ],
     createCountdown: { element: ".seconds" },
     customScript() {},
@@ -1889,7 +2132,8 @@ const siteRules = {
       ".adsbygoogle",
       "#countdown", // countdown doesn't matter
       "form > div > div.col-xs-12.col-sm-12.col-md-8.col-lg-8",
-      "form[name='F1'] > .row"
+      "form[name='F1'] > .row",
+      ".mngez-free-download", // initial button
     ],
     removeByRegex: [{ query: ".txt", regex: /uploadrar|Cloud computing/gi }],
     removeIFrames: false,
@@ -1934,17 +2178,58 @@ const siteRules = {
       "showFullScreen",
       "_gfp_a_",
     ],
-    addInfoBanner: [{targetElement:"form", where:"beforeend"}, {targetElement:".download2page", where:"beforeend"}],
+    addInfoBanner: [
+      // { targetElement: "form", where: "beforeend" },
+      { targetElement: ".download2page", where: "beforeend" },
+      { targetElement: ".download0page", where: "beforeend" },
+    ],
     modifyButtons: [
-      ["input[name='method_free']", {replaceWithTag: "button", customText: "Free Download", props: { type: "submit" } }],
-      ["#direct_link a", { replaceWithForm: true }],
+      // [
+      //   "input[name='method_free']",
+      //   {
+      //     replaceWithTag: "button",
+      //     customText: "Free Download",
+      //     props: { type: "submit" },
+      //   },
+      // ],
+      // ["#direct_link a", { replaceWithForm: true }],
     ],
     customScript() {
       // aesthetics
-      this.$$(".col-md-4, .col-lg-4")?.forEach(e => {
+      this.$$(".col-md-4, .col-lg-4")?.forEach((e) => {
         e.classList.replace("col-md-4", "col-md-12");
-        e.classList.replace("col-lg-4", "col-md-12");
+        e.classList.replace("col-lg-4", "col-lg-12");
       });
+      const fileId = document.location.href.slice(
+        document.location.href.lastIndexOf("/") + 1
+      );
+      const url = `https://uploadrar.com/${fileId}`;
+      this.$("form").innerHTML = "Loading...";
+      fetch(url, {
+        credentials: "include",
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Upgrade-Insecure-Requests": "1",
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+          "Sec-Fetch-Site": "same-origin",
+        },
+        referrer: url,
+        body: `op=download2&id=${fileId}&rand=&referer=https%3A%2F%2Fuploadrar.com&method_free=Free+Download&adblock_detected=0`,
+        method: "POST",
+        mode: "cors",
+      })
+        .then((r) => r.text())
+        .then((d) => d.match(/<a href="([^"]+"?uploadrar.com:[^"]+)"/)?.[1])
+        .then((link) => {
+          // this.$$("body > *").forEach(e=>e.remove());
+          this.$("form").replaceWith(this.makeSafeForm({ actionURL: link }));
+        });
     },
   },
   mega4up: {
@@ -2035,40 +2320,50 @@ const siteRules = {
       "google_reactive_ads_global_state",
       "_gfp_a_",
       "google_user_agent_client_hint",
-    ],
-    finalDownloadElementSelector: [["#direct_link > a"]],
-    addHoverAbility: [
-      ["button#downloadbtn", true],
-      ["#direct_link > a", false],
+      "openInBrowser",
+      "isInApp",
+      "fbAsyncInit",
+      "dataLayer",
+      "FB",
+      "ga",
+      "closure_lm_774210",
+      "k",
+      "_h971nmz63bi",
+      "qrezw3pc8x",
+      "zfgformats",
+      "setImmediate",
+      "clearImmediate",
+      "_mrrnmlce",
+      "_ximqygr",
+      "zfgproxyhttp",
     ],
     addInfoBanner: [
       { targetElement: "form[name='F1']" },
       { targetElement: "#direct_link" },
     ],
+    modifyButtons: [
+      [
+        "form:not([name='F1']) input[name='mega_free']",
+        { replaceWithTag: "button", customText: "Free Download" },
+      ],
+      [
+        "button#downloadbtn",
+        { requiresCaptcha: true, requiresTimer: true, makeListener: true },
+      ],
+      ["#direct_link > a", { replaceWithForm: true, props: { onclick: "" } }],
+    ],
     createCountdown: { element: ".seconds" },
     customScript() {
-      // click the "Free Download" option on page 1
-      this.$("input[name='mega_free']")?.click();
-
-      this.waitUntilSelector("#direct_link > a").then((btn) =>
-        btn.removeAttribute("onclick")
-      );
-
-      // add listener
-      this.addCaptchaListener(document.F1, +this.$(".seconds").innerText || 30);
-
-      this.ifElementExists(
-        "div.card.mb-4 > div.card-body > div.row > div.col-xl-4",
-        () => {
-          this.$(
-            "div.card.mb-4 > div.card-body > div.row > div.col-xl-4"
-          )?.classList.replace("col-xl-4", "col-xl-12");
-        }
-      );
+      // aesthetics
+      this.$$(".col-md-4, .col-lg-4, .col-xl-4")?.forEach((e) => {
+        e.classList.replace("col-md-4", "col-md-12");
+        e.classList.replace("col-lg-4", "col-lg-12");
+        e.classList.replace("col-xl-4", "col-xl-12");
+      });
     },
   },
-  "userupload.in": {
-    host: ["userupload.in"],
+  userupload: {
+    host: ["userupload.in", "userupload.net"],
     customStyle: `body{background-color:#121212 !important}`,
     downloadPageCheckBySelector: ["#downloadbtn"],
     downloadPageCheckByRegex: [
@@ -2076,8 +2371,19 @@ const siteRules = {
       /Click here to download/gi,
       /Download link generated/gi,
     ],
-    remove: ["nav", "#st_gdpr_iframe", "#banner_ad", "footer", "div.report"],
-    removeByRegex: [{ query: ".aboutFile", regex: /UserFree/gi }],
+    remove: [
+      "nav",
+      "#st_gdpr_iframe",
+      "#banner_ad",
+      "footer",
+      "div.report",
+      ".adsbygoogle",
+      ".bannerad",
+      ".aboutFile",
+    ],
+    removeByRegex: [
+      // { query: ".aboutFile", regex: /UserFree/gi }
+    ],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
@@ -2186,57 +2492,34 @@ const siteRules = {
       "onClickTrigger",
       "zfgloadedpopup",
       "ppuWasShownFor4194753",
+      "qsx3bu3x73",
+      "ppuWasShownFor3481353",
     ],
-    finalDownloadElementSelector: [
-      ["form a[type='button']", /download now|userupload.in:183/gi],
-    ],
-    addHoverAbility: [["form a[type='button']"], ["button#downloadbtn"]],
     addInfoBanner: [
       { targetElement: "form[name='F1'] .row", where: "beforeend" },
     ],
+    modifyButtons: [
+      [
+        "#downloadbtn",
+        {
+          requiresCaptcha: true,
+          requiresTimer: true,
+          makeListener: true,
+          props: { disabled: false, type: "submit" },
+          moveTo: { target: ".download-btn", position: "beforebegin" },
+        },
+      ],
+      ["form a[type='button']", { replaceWithForm: true }],
+    ],
     createCountdown: { element: ".seconds" },
     customScript() {
-      this.addCaptchaListener(
-        document.forms.F1,
-        +this.$(".seconds").innerText || 5
-      );
-    },
-  },
-  "userupload.net": {
-    host: ["userupload.net"],
-    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}.card,.icon,.label-group,.subpage-content{background:#121212!important}`,
-    downloadPageCheckBySelector: ["button#downloadbtn"],
-    downloadPageCheckByRegex: [
-      /Create Download Link/gi,
-      /available for your IP next 24 hours/gi,
-    ],
-    remove: [
-      "#st_gdpr_iframe",
-      "nav",
-      "footer",
-      ".aboutFile",
-      ".adsbygoogle",
-      "form div.report",
-    ],
-    removeByRegex: [],
-    hideElements: undefined,
-    removeIFrames: true,
-    removeDisabledAttr: true,
-    finalDownloadElementSelector: [["form a.btn.btn-primary.btn-block"]],
-    addHoverAbility: [
-      ["button#downloadbtn", true],
-      ["form a.btn.btn-primary.btn-block", false],
-    ],
-    addInfoBanner: [],
-    customScript() {
-      // add listener
-      this.addCaptchaListener(document.F1);
-
-      this.ifElementExists("form[name='F1']", () => {
-        this.addInfoBanner({
-          targetElement: this.$("form[name='F1']")?.parentElement,
-        });
+      // aesthetics
+      this.$$(".col-lg-6")?.forEach((e) => {
+        e.classList.replace("col-lg-6", "col-lg-12");
       });
+
+      // stop ads
+      this.waitUntilSelector("body > iframe").then((iframe) => iframe.remove());
     },
   },
   rapidgator: {
@@ -2260,16 +2543,24 @@ const siteRules = {
     hideElements: undefined,
     removeIFrames: true,
     removeDisabledAttr: true,
-    finalDownloadElementSelector: [],
-    addHoverAbility: [
-      ["form#captchaform a.btn", true],
-      ["a.link.act-link.btn-free", false],
+    // finalDownloadElementSelector: [],
+    // addHoverAbility: [
+    //   ["form#captchaform a.btn", true],
+    //   ["a.link.act-link.btn-free", false],
+    //   [
+    //     "div.in div.download-ready div.btm div.box-download a.btn.btn-download",
+    //     true,
+    //   ],
+    // ],
+    addInfoBanner: [],
+    modifyButtons: [
+      ["form#captchaform a.btn", { requiresCaptcha: true, makeListener: true }],
       [
         "div.in div.download-ready div.btm div.box-download a.btn.btn-download",
-        true,
+        { requiresCaptcha: true, makeListener: true },
       ],
+      ["a.link.act-link.btn-free"],
     ],
-    addInfoBanner: [],
     customScript() {
       // add listener
       this.addCaptchaListener(document.forms.captchaform);
@@ -2294,7 +2585,7 @@ const siteRules = {
   },
   katfile: {
     host: ["katfile.com"],
-    customStyle: `html{background:#121212!important}body{background:#121212!important;background-color:#121212!important;color:#dfdfdf!important}#container,.wrapper{background:#121212!important}.panel{background:#212121!important}`,
+    customStyle: `html,body,#container,.wrapper{background:#121212!important;color:#dfdfdf!important}.panel,.free li{background:#212121!important}`,
     downloadPageCheckBySelector: ["#downloadbtn"],
     downloadPageCheckByRegex: [
       /reCAPTCHA is a/gi,
@@ -2307,6 +2598,11 @@ const siteRules = {
       "#dllinked2",
       "#adtrue_tag_21265",
       "#addToAccount",
+      ".panel.panel-default > .row > .col-sm-4:nth-child(2n+1)",
+      ".panel.panel-default .free li:not([style])",
+      "#es1",
+      "#sharebuttons",
+      "#hbtn",
     ],
     removeByRegex: [],
     hideElements: undefined,
@@ -2345,18 +2641,44 @@ const siteRules = {
       "k",
       "allElement",
     ],
-    finalDownloadElementSelector: [["#dlink"]],
-    addHoverAbility: undefined,
     addInfoBanner: [],
+    modifyButtons: [
+      [
+        "#fbtn1",
+        {
+          replaceWithTag: "button",
+          customText: "Free Download",
+          props: { type: "submit" },
+        },
+      ],
+      [
+        "button.downloadbtn.ddddd",
+        {
+          customText: "Download",
+          requiresCaptcha: true,
+          makeListener: true,
+          props: { type: "submit", onclick: "", style: "" },
+        },
+      ],
+      ["#dlink", { replaceWithForm: true }],
+    ],
     customScript() {
-      this.$("#freebtn")?.click();
-      if (!window.grecaptcha) {
-        this.$("#downloadbtn")?.click();
-      }
-      this.$("#dlink")?.click();
+      this.$$(".col-sm-4, .col-md-4").forEach((el) => {
+        el.classList.replace("col-sm-4", "col-sm-12");
+        el.classList.replace("col-md-4", "col-md-12");
+      });
+      this.$("form#btn_download")?.insertAdjacentHTML(
+        "afterbegin",
+        `<input type="hidden" name="method_free" value="SLOW SPEED DOWNLOAD">`
+      );
+      // this.$("#freebtn")?.click();
+      // if (!window.grecaptcha) {
+      //   this.$("#downloadbtn")?.click();
+      // }
+      // this.$("#dlink")?.click();
 
-      // add listener
-      this.addCaptchaListener(document.forms.F1);
+      // // add listener
+      // this.addCaptchaListener(document.forms.F1);
     },
   },
   "upload-4ever": {
@@ -2371,7 +2693,17 @@ const siteRules = {
       /You can upgrade your account to a Premium account/gi,
       /click here to download/gi,
     ],
-    remove: ["nav", "#gdpr-cookie-notice", "footer"],
+    remove: [
+      "nav",
+      "#gdpr-cookie-notice",
+      "footer",
+      "input[name='method_premium']",
+      ".my-3 > p.m-0",
+      "#commonId > center > div.my-4",
+      "#google_esf",
+      ".appHeader",
+      "header",
+    ],
     removeByRegex: [
       {
         query: "div.col-sm-12.content-section.text-center.mb-5",
@@ -2438,46 +2770,64 @@ const siteRules = {
       "webpushlogs",
       "initIPP",
     ],
-    finalDownloadElementSelector: [],
-    addHoverAbility: [
-      ["div.rightcol div#commonId button#downloadbtn", true],
-      ["a#downLoadLinkButton", false],
-    ],
     addInfoBanner: [
       { targetElement: "div.rightcol div#commonId", where: "beforeend" },
       { targetElement: "a#downLoadLinkButton", where: "afterend" },
     ],
+    modifyButtons: [
+      [
+        "form:not([name='F1']) input[name='method_free']",
+        { replaceWithTag: "button", customText: "Free Download" },
+      ],
+      [
+        "#downloadbtn",
+        {
+          customText: "Create Download Link",
+          requiresCaptcha: true,
+          requiresTimer: true,
+          makeListener: true,
+        },
+      ],
+      [
+        "#downLoadLinkButton",
+        {
+          replaceWithForm: true,
+          fn(btn) {
+            btn.href = btn.dataset.target;
+          },
+        },
+      ],
+    ],
     createCountdown: { element: ".seconds" },
     customScript() {
-      this.ifElementExists("#downloadbtn", () => {
-        this.$("#downloadbtn").classList.replace("btn-sm", "btn-lg");
-      });
-
-      // Automation
-      this.$("input[name='method_free']")?.click();
-      this.addCaptchaListener(document.forms.F1, 35);
-      this.waitUntilSelector("#downLoadLinkButton").then((link) => {
-        this.logDebug(link.getAttribute("onclick"));
-        // Remove nasty ad redirect
-        link.removeAttribute("onclick");
-        link.setAttribute("href", link?.dataset.target);
-        this.logNative(link?.dataset.target);
-        if (link?.dataset.target) {
-          this.log("DDL Link was found on this page.");
-          // Open DDL for download
-          this.openNative(link?.dataset.target, "_self");
-          this.log("Opening DDL link for file.");
-        }
-      });
-      this.waitUntilSelector("#downLoadLinkButton[onclick]").then((btn) => {
-        this.log(btn.getAttribute("onclick"));
-        btn.removeAttribute("onclick");
-      });
+      // this.ifElementExists("#downloadbtn", () => {
+      //   this.$("#downloadbtn").classList.replace("btn-sm", "btn-lg");
+      // });
+      // // Automation
+      // this.$("input[name='method_free']")?.click();
+      // this.addCaptchaListener(document.forms.F1, 35);
+      // this.waitUntilSelector("#downLoadLinkButton").then((link) => {
+      //   this.logDebug(link.getAttribute("onclick"));
+      //   // Remove nasty ad redirect
+      //   link.removeAttribute("onclick");
+      //   link.setAttribute("href", link?.dataset.target);
+      //   this.logNative(link?.dataset.target);
+      //   if (link?.dataset.target) {
+      //     this.log("DDL Link was found on this page.");
+      //     // Open DDL for download
+      //     this.openNative(link?.dataset.target, "_self");
+      //     this.log("Opening DDL link for file.");
+      //   }
+      // });
+      // this.waitUntilSelector("#downLoadLinkButton[onclick]").then((btn) => {
+      //   this.log(btn.getAttribute("onclick"));
+      //   btn.removeAttribute("onclick");
+      // });
     },
   },
   uploadev: {
     host: ["uploadev.org"],
-    customStyle: `.mngez_messgepage,.mngez_download0,.mngez_download1,body{background:#121212!important;color:#dfdfdf!important}.mngez_download1 .capcha p{color:#dfdfdf!important}.mngez_download1 .fileinfo .colright .col1 p i{color:#dfdfdf!important}.mngez_download1 .fileinfo .colright .col1 span{color:#dfdfdf!important}.adsbygoogle{display:none!important}`,
+    customStyle: `.mngez_messgepage,.mngez_download0,.mngez_download1,body{background:#121212!important;color:#dfdfdf!important}.mngez_download1 .capcha p{color:#dfdfdf!important}.mngez_download1 .fileinfo .colright .col1 p i{color:#dfdfdf!important}.mngez_download1 .fileinfo .colright .col1 span{color:#dfdfdf!important}.adsbygoogle,div.tableoffers{display:none!important}`,
     downloadPageCheckBySelector: [
       "input[name='method_free']",
       "#error_message",
@@ -2498,14 +2848,16 @@ const siteRules = {
       ".fileinfo .col2",
       "form > center",
       ".adsbygoogle",
+      ".offersfree li:not([id='dspeed'])",
+      ".row > .col-xs-12.col-sm-12.col-md-3.col-lg-3",
     ],
     removeByRegex: [],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: true,
     destroyWindowFunctions: [
-      // '__rocketLoaderEventCtor',
-      // '__rocketLoaderLoadProgressSimulator',
+      "__rocketLoaderEventCtor",
+      "__rocketLoaderLoadProgressSimulator",
       "__cfQR",
       "zfgformats",
       "sdk",
@@ -2592,20 +2944,39 @@ const siteRules = {
       "urls",
       "random",
     ],
-    finalDownloadElementSelector: [["#direct_link a.directl"]],
-    addHoverAbility: [["#downloadbtn", true], ["#direct_link a.directl"]],
-    addInfoBanner: [{ targetElement: ".mngez_download1", where: "beforeend" }],
+    addInfoBanner: [
+      { targetElement: ".mngez_download1", where: "beforeend" },
+      { targetElement: ".mngez_download0", where: "beforeend" },
+    ],
+    modifyButtons: [
+      [
+        "form:not([name='F1']) input[name='method_free']",
+        {
+          replaceWithTag: "button",
+          customText: "Free Download",
+          moveTo: { target: "form > .row", position: "beforebegin" },
+        },
+      ],
+      [
+        "button#downloadbtn",
+        {
+          requiresCaptcha: true,
+          requiresTimer: true,
+          makeListener: true,
+          customText: "Create Download Link",
+        },
+      ],
+      ["span#direct_link > .directl", { replaceWithForm: true }],
+    ],
     createCountdown: { element: ".seconds" },
     customScript() {
-      this.origSetTimeout(() => {
-        this.waitUntilSelector("input[name='method_free']").then((btn) =>
-          btn?.click()
-        );
-      }, 1000);
-      // this page is slow for some reason so we have to delay
-      this.waitUntilGlobalVariable("grecaptcha").then(() => {
-        this.addCaptchaListener(document.forms.F1, 20);
+      this.$$(".col-xs-12.col-sm-12.col-md-9.col-lg-9").forEach((el) => {
+        el.classList.replace("col-md-9", "col-md-12");
+        el.classList.replace("col-lg-9", "col-lg-12");
       });
+      if (this.$(".g-recaptcha")) {
+        this.addGoogleRecaptchaJS();
+      }
     },
   },
   apkadmin: {
@@ -2724,31 +3095,21 @@ const siteRules = {
       "_google_rum_ns_",
       "google_rum_values",
     ],
-    finalDownloadElementSelector: [],
-    addHoverAbility: undefined,
-    addInfoBanner: [],
+    addInfoBanner: [{ targetElement: "form", where: "afterend" }],
+    modifyButtons: [
+      ["button#downloadbtn", { customText: "Get Download Link" }],
+      ["#content a", { replaceWithForm: true, customText: "Download Now" }],
+    ],
     customScript() {
-      this.$("#downloadbtn")?.click();
+      // this.$("#downloadbtn")?.click();
     },
   },
   dlupload: {
     host: ["khabarbabal.online", "dlsharefile.com", "dlsharefile.org"],
-    // customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}.bg-secondary,.bg-white,.card,.icon,.label-group,.subpage-content{background:#121212!important}#show-submit-btn,.border.bg-secondary .bg-white.border-0,.col-lg-12.text-center,.row.justify-content-center>a[href],.separator,.text-lg-center.btn-wrapper,center,h5.mb-0{display:none!important}.d-none{display:block!important}.h1,.h2,.h3,.h4,.h5,.h6,h1,h2,h3,h4,h5,h6{color:#dfdfdf!important}.container-1{unset:hidden!important}form#DownloadForm{display:flex;flex-direction:column;align-items:center}`,
-    customStyle: `body,html{background:#121212!important;color:#dfdfdf!important}form#DownloadForm{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}`,
+    customStyle: `body,html{background:#121212!important;color:#dfdfdf!important}form#DownloadForm{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 15%;}`,
     downloadPageCheckBySelector: ["a.downloadb"],
     downloadPageCheckByRegex: [/free download/gi],
-    remove: [
-      "body > *",
-      // "header",
-      // "footer",
-      // ".adsbygoogle",
-      // "center",
-      // ".shape.shape-style-1",
-      // "div.separator.separator-bottom.separator-skew",
-      // ".border.bg-secondary",
-      // "br",
-      // ".text-center > .row.justify-content-center > a",
-    ],
+    remove: ["body > *"],
     removeByRegex: [
       { query: ".row.mx-auto", regex: /DLUpload is a secure/gi },
       { query: ".col-lg-12.text-center", regex: /Safe & Secure/gi },
@@ -2762,7 +3123,6 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [
-      "ethereum",
       "gtag",
       "dataLayer",
       "adsbygoogle",
@@ -2853,10 +3213,15 @@ const siteRules = {
       "urlsArray1",
       "randomNumber1",
       "currentImageUrl1",
+      "_0x2182",
+      "_0x4eb5",
+      "_0x126d",
+      "_0x16be",
+      "_0x5c7565",
+      "closure_lm_755568",
     ],
-    finalDownloadElementSelector: [],
-    addHoverAbility: [["#Submit", true]],
     addInfoBanner: [{ targetElement: "#DownloadForm", where: "beforeend" }],
+    modifyButtons: [["#Submit", { requiresCaptcha: true, makeListener: true }]],
     customScript() {
       // the magic cookie that allows the direct download
       this.document.cookie = `RedirectCookies=FilePage3;path=/`;
@@ -2865,54 +3230,27 @@ const siteRules = {
         "afterbegin",
         `<form id="DownloadForm" action="/Download/FilePage5" method="post">
       <input type="hidden" name="FileId" value="NmU1ZDRhOTYt">
-      <button class="btn btn-lg btn-facebook" type="submit" id="Submit">Start Download</button>`
+      <button class="ss-btn ss-w-100" type="submit" id="Submit">Start Download</button>`
       );
-      this.addHoverAbility(["#Submit"], true);
+      this.modifyButton("#Submit", {
+        requiresCaptcha: true,
+        makeListener: true,
+        eventHandlers: {
+          click: function () {
+            this.innerText = "Loading... Please Wait";
+          },
+        },
+      });
       this.addInfoBanner({
         targetElement: "#DownloadForm",
         where: "beforeend",
       });
       // manually create Google ReCAPTCHA for direct download
-      this.createGoogleRecaptcha(
-        "#DownloadForm",
-        "6LdyluwUAAAAAI5AMDQTg4_9LFoNbrJub0IsdU3p",
-        "afterbegin"
-      );
-      this.waitUntilGlobalVariable("grecaptcha").then(() => {
-        this.addCaptchaListener("#DownloadForm", 0);
-      });
-      return;
-      // rest of this was used before finding the workaround
-      this.waitUntilSelector("a#downloadb").then((btn) => {
-        btn?.click();
-      });
-      this.waitUntilSelector("#download-status").then((btn) => {
-        $("#download-status").attr("id", "loading").text("Loading...");
-        $("div#Download-Card").css("display", "none");
-        $(".File-Info-Download").css("visibility", "visible");
-      });
-      this.waitUntilSelector("a#downloadbtn").then((btn) => {
-        btn?.addEventListener(
-          "click",
-          function () {
-            this.textContent = "Loading... Please Wait";
-          },
-          false
-        );
-        btn?.click();
-      });
-      this.waitUntilSelector("form#DownloadForm").then(() => {
-        this.addCaptchaListener("form#DownloadForm").then(() => {
-          this.$("#Submit")?.addEventListener(
-            "click",
-            function () {
-              this.textContent = "Loading... Please Wait";
-            },
-            false
-          );
-          this.$("#Submit")?.click();
-        });
-      });
+      const site_key = {
+        "khabarbabal.online": "6LdyluwUAAAAAI5AMDQTg4_9LFoNbrJub0IsdU3p",
+        "dlsharefile.com": "6Le3YeIZAAAAABZGkjxfOt9ArTwbUsvv8alL5l1k",
+      }[document.domain];
+      this.createGoogleRecaptcha("#DownloadForm", site_key, "afterbegin");
     },
   },
   file4: {
@@ -3043,14 +3381,22 @@ const siteRules = {
       "e",
       "x",
     ],
-    finalDownloadElementSelector: [[".div2 a[href^='down']"]],
-    addHoverAbility: [
-      ["form[name='myform'] input[type='submit']", true],
-      [".div2 a[href^='down']", false],
-    ],
+    // finalDownloadElementSelector: [[".div2 a[href^='down']"]],
     addInfoBanner: [
       { targetElement: "form[name='myform']", where: "beforeend" },
       { targetElement: ".div2 a[href^='down']", where: "afterend" },
+    ],
+    modifyButtons: [
+      [
+        "form[name='myform'] input[type='submit']",
+        {
+          requiresCaptcha: true,
+          makeListener: true,
+          replaceWithTag: "button",
+          customText: "Create Download Link",
+        },
+      ],
+      [".div2 a[href^='down']"], // cannot use form because it truncates the URL params
     ],
     customScript() {
       this.waitUntilGlobalVariable("grecaptcha").then(() => {
@@ -3059,7 +3405,7 @@ const siteRules = {
           "afterbegin",
           `<input type="hidden" name="sub" value="Continue">`
         );
-        this.addCaptchaListener(form);
+        // this.addCaptchaListener(form);
       });
       this.waitUntilSelector(".div1").then(
         (div) => (div.style.display = "none")
@@ -3070,9 +3416,253 @@ const siteRules = {
       });
     },
   },
+  checkURL: {
+    host: ["checkurl.org", "checkurl.me"],
+    customStyle: `html,body,#wrapper,#content{background:#121212!important;color:#dfdfdf!important}#wrapper{opacity:1!important}`,
+    downloadPageCheckBySelector: ["button#Sbutton"],
+    downloadPageCheckByRegex: [],
+    remove: [
+      "header",
+      "footer",
+      ".container > :not(.col_two_third)",
+      ".col_two_third > :not(button)",
+      "#google_esf",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "gtag",
+      "dataLayer",
+      "google_ad_client",
+      "google_ad_slot",
+      "google_ad_width",
+      "google_ad_height",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_plmetrics",
+      "google_reactive_ads_global_state",
+      "google_onload_fired",
+      "google_sa_queue",
+      "google_sl_win",
+      "google_process_slots",
+      "google_unique_id",
+      "google_ad_block",
+      "google_ad_channel",
+      "google_ad_format",
+      "google_ad_host",
+      "google_ad_host_channel",
+      "google_ad_host_tier_id",
+      "google_ad_layout",
+      "google_ad_layout_key",
+      "google_ad_output",
+      "google_ad_region",
+      "google_ad_section",
+      "google_ad_type",
+      "google_ad_unit_key",
+      "google_ad_dom_fingerprint",
+      "google_ad_semantic_area",
+      "google_placement_id",
+      "google_adtest",
+      "google_allow_expandable_ads",
+      "google_alternate_ad_url",
+      "google_alternate_color",
+      "google_apsail",
+      "google_captcha_token",
+      "google_city",
+      "google_color_bg",
+      "google_color_border",
+      "google_color_line",
+      "google_color_link",
+      "google_color_text",
+      "google_color_url",
+      "google_container_id",
+      "google_content_recommendation_ad_positions",
+      "google_content_recommendation_columns_num",
+      "google_content_recommendation_rows_num",
+      "google_content_recommendation_ui_type",
+      "google_content_recommendation_use_square_imgs",
+      "google_contents",
+      "google_country",
+      "google_cpm",
+      "google_ctr_threshold",
+      "google_cust_age",
+      "google_cust_ch",
+      "google_cust_criteria",
+      "google_cust_gender",
+      "google_cust_id",
+      "google_cust_interests",
+      "google_cust_job",
+      "google_cust_l",
+      "google_cust_lh",
+      "google_cust_u_url",
+      "google_disable_video_autoplay",
+      "google_enable_content_recommendations",
+      "google_enable_ose",
+      "google_encoding",
+      "google_font_face",
+      "google_font_size",
+      "google_frame_id",
+      "google_full_width_responsive_allowed",
+      "efwr",
+      "google_full_width_responsive",
+      "gfwroh",
+      "gfwrow",
+      "gfwroml",
+      "gfwromr",
+      "gfwroz",
+      "gfwrnh",
+      "gfwrnwer",
+      "gfwrnher",
+      "google_gl",
+      "google_hints",
+      "google_image_size",
+      "google_kw",
+      "google_kw_type",
+      "google_language",
+      "google_loeid",
+      "google_max_num_ads",
+      "google_max_radlink_len",
+      "google_max_responsive_height",
+      "google_ml_rank",
+      "google_mtl",
+      "google_native_ad_template",
+      "google_native_settings_key",
+      "google_num_radlinks",
+      "google_num_radlinks_per_unit",
+      "google_override_format",
+      "google_page_url",
+      "google_pgb_reactive",
+      "google_pucrd",
+      "google_referrer_url",
+      "google_region",
+      "google_resizing_allowed",
+      "google_resizing_height",
+      "google_resizing_width",
+      "rpe",
+      "google_responsive_formats",
+      "google_responsive_auto_format",
+      "armr",
+      "google_rl_dest_url",
+      "google_rl_filtering",
+      "google_rl_mode",
+      "google_rt",
+      "google_safe",
+      "google_safe_for_responsive_override",
+      "google_video_play_muted",
+      "google_source_type",
+      "google_tag_for_child_directed_treatment",
+      "google_tag_for_under_age_of_consent",
+      "google_tag_origin",
+      "google_tag_partner",
+      "google_targeting",
+      "google_tfs",
+      "google_video_doc_id",
+      "google_video_product_type",
+      "google_webgl_support",
+      "google_package",
+      "google_debug_params",
+      "dash",
+      "google_restrict_data_processing",
+      "google_apltlad",
+      "google_sv_map",
+      "googletag",
+      "google_user_agent_client_hint",
+      "sm_format_twitter",
+      "sm_format_twitter2",
+      "sm_format_twitter3",
+      "relative_time",
+      "ytp",
+      "onYouTubeIframeAPIReady",
+      "getYTPVideoID",
+      "iOSversion",
+      "nAgt",
+      "isTouchSupported",
+      "getOS",
+      "nameOffset",
+      "verOffset",
+      "ix",
+      "start",
+      "end",
+      "uncamel",
+      "setUnit",
+      "setFilter",
+      "jRespond",
+      "Instafeed",
+      "Cookies",
+      "skrollr",
+      "JQClass",
+      "jQueryBridget",
+      "EvEmitter",
+      "getSize",
+      "matchesSelector",
+      "fizzyUIUtils",
+      "Outlayer",
+      "Isotope",
+      "Masonry",
+      "imagesLoaded",
+      "Swiper",
+      "ResizeSensor",
+      "toastr",
+      "InfiniteScroll",
+      "debounce",
+      "requesting",
+      "killRequesting",
+      "onScrollSliderParallax",
+      "SEMICOLON",
+      "setDisabled",
+      "google_tag_manager",
+      "google_tag_data",
+      "gaGlobal",
+      "aawChunk",
+      "aaw",
+      "_pbjsGlobals",
+      "__core-js_shared__",
+      "pbjs",
+      "docReady",
+      "mnet",
+      "Goog_AdSense_getAdAdapterInstance",
+      "Goog_AdSense_OsdAdapter",
+      "google_sa_impl",
+      "goog_pvsid",
+      "adsbygoogle",
+      "_gfp_a_",
+      "google_spfd",
+      "google_jobrunner",
+      "google_persistent_state_async",
+      "googleToken",
+      "googleIMState",
+      "_gfp_p_",
+      "processGoogleToken",
+      "google_global_correlator",
+      "google_prev_clients",
+      "ampInaboxIframes",
+      "ampInaboxPendingMessages",
+      "goog_sdr_l",
+      "GoogleGcLKhOms",
+      "google_image_requests",
+    ],
+    addInfoBanner: [],
+    createCountdown: "",
+    modifyButtons: [
+      [
+        "button#Sbutton",
+        {
+          props: { disabled: false },
+          customText: "Continue",
+        },
+      ],
+    ],
+    customScript() {},
+  },
   dailyuploads: {
     host: ["dailyuploads.net"],
-    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}form[name=F1]{visibility:hidden}form[name=F1] table{visibility:visible}div.banner div.inner{display:flex;flex-direction:column;align-items:center}a[href*='.dailyuploads.net']:before{content:"Download"}a[href*='.dailyuploads.net'],#downloadBtnClickOrignal,.ss-btn{background-color:#44c767;border-radius:28px;border:1px solid #18ab29;display:inline-block;cursor:pointer;color:#fff;font-family:Arial;font-size:17px;font-weight:700;padding:12px 64px;text-decoration:none;text-shadow:0 1px 0 #2f6627}a[href*='.dailyuploads.net']:hover,#downloadBtnClickOrignal:hover,.ss-btn:hover{background-color:#5cbf2a}a[href*='.dailyuploads.net'],#downloadBtnClickOrignal,.ss-btn:active{position:relative;top:1px}`,
+    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}form[name=F1]{visibility:hidden}form[name=F1] table{visibility:visible}div.banner div.inner{display:flex;flex-direction:column;align-items:center}`,
     downloadPageCheckBySelector: [],
     downloadPageCheckByRegex: [
       /Download File/gi,
@@ -3370,11 +3960,24 @@ const siteRules = {
       "process_607019",
       "$insertf2e96b1e1637$",
     ],
-    finalDownloadElementSelector: [["a[href*='.dailyuploads.net']"]],
-    addHoverAbility: [["a[href*='.dailyuploads.net']"], ["#downloadBtnClick"]],
     addInfoBanner: [
       { targetElement: "a[href*='.dailyuploads.net']", where: "afterend" },
       { targetElement: "#downloadBtnClick", where: "afterend" },
+    ],
+    modifyButtons: [
+      [
+        "button#downloadBtnClickOrignal",
+        {
+          requiresCaptcha: true,
+          makeListener: true,
+          customText: "Create Download Link",
+          props: { style: "" },
+        },
+      ],
+      [
+        "a[href*='.dailyuploads.net']",
+        { replaceWithForm: true, customText: "Start Download" },
+      ],
     ],
     customScript() {
       this.waitUntilGlobalVariable("grecaptcha").then(() => {
@@ -3396,18 +3999,18 @@ const siteRules = {
           },
           false
         );
-        this.addCaptchaListener(form).then(() => {
-          this.$("#downloadBtnClick").textContent = "Loading...";
-        });
+        // this.addCaptchaListener(form).then(() => {
+        //   this.$("#downloadBtnClick").textContent = "Loading...";
+        // });
       });
-      this.waitUntilSelector("#downloadBtnClick").then((btn) => {
-        btn.className = "ss-btn";
-      });
-      this.waitUntilSelector(
-        "body > div.banner > div > a[href*='dailyuploads']"
-      ).then((btn) => {
-        btn.className = "ss-btn";
-      });
+      // this.waitUntilSelector("#downloadBtnClick").then((btn) => {
+      //   btn.className = "ss-btn";
+      // });
+      // this.waitUntilSelector(
+      //   "body > div.banner > div > a[href*='dailyuploads']"
+      // ).then((btn) => {
+      //   btn.className = "ss-btn";
+      // });
       let curr = this.$("form table").nextElementSibling;
       let old = null;
       while (curr != null) {
@@ -3419,17 +4022,26 @@ const siteRules = {
   },
   usersdrive: {
     host: ["usersdrive.com"],
-    customStyle: `html{background:#121212!important}body{background:#121212!important;color:#dfdfdf!important;padding:0!important}.container-fluid main{background:#121212!important;padding:0!important}.down{display:flex!important;flex-direction:column!important;align-items:center!important}`,
+    customStyle: `html{background:#121212!important}body{background:#121212!important;color:#dfdfdf!important;padding:0!important}.container-fluid main{background:#121212!important;padding:0!important}.down{display:flex!important;flex-direction:column!important;align-items:center!important}.seconds,h1,h2,h3,h4,h5,h6,span,.icon{color:#dfdfdf!important}.second{background:#323232!important}.first{background:#212121!important}#progress{line-height:unset!important;height:50px!important}`,
     downloadPageCheckBySelector: [
       "button#method_free",
       "button#downloadbtn",
       "div a.btn-download.get-link",
+      "form[name='F1']",
     ],
     downloadPageCheckByRegex: [
       /Create Download Link/gi,
       /This direct link will be available/gi,
     ],
-    remove: ["nav", "center", ".col-md", ".socialmedia", ".pro"],
+    remove: [
+      "nav",
+      "center",
+      ".col-md",
+      ".socialmedia",
+      ".pro",
+      "div.report",
+      "body > div > div > main > div.content",
+    ],
     removeByRegex: [],
     hideElements: undefined,
     removeIFrames: false,
@@ -3496,23 +4108,26 @@ const siteRules = {
       "_0x41de",
       "EmailDialog",
     ],
-    finalDownloadElementSelector: [
-      [".down a", /This direct link will be available/gi],
+    addInfoBanner: [
+      { targetElement: "form[name='F1']", position: "beforeend" },
     ],
-    addHoverAbility: undefined,
-    addInfoBanner: [],
+    modifyButtons: [
+      [
+        "button#downloadbtn",
+        { requiresCaptcha: true, requiresTimer: true, makeListener: true },
+      ],
+      [".down a", { replaceWithForm: true }],
+    ],
     createCountdown: { element: ".seconds" },
     customScript() {
-      this.$(".row .col-md-4")?.classList?.replace("col-md-4", "col-md-12");
-      this.addCaptchaListener(
-        document.forms.F1,
-        +this.$(".seconds").innerText || 17
+      this.$$(".row .col-md-4").forEach((e) =>
+        e.classList?.replace("col-md-4", "col-md-12")
       );
     },
   },
   indishare: {
     host: ["indi-share.net", "indi-share.com", "techmyntra.net"],
-    customStyle: `html{background:#121212!important}body,.panelRight,h2{background:#121212!important;color:#dfdfdf!important;padding:0!important}#direct_link a{background-color:#008CBA;border:none;color:#fff;padding:15px 32px;text-align:center;text-decoration:none;display:inline-block;font-size:16px}#direct_link a:hover{background-color:#0A6BD1}#direct_link a:before{content:"Download"}#content{display:flex;flex-direction:column;align-items:center}#container{height:inherit !important;}`,
+    customStyle: `html,body,.panelRight,h2,#wrapper{background:#121212!important;color:#dfdfdf!important;padding:0!important}#content{display:flex;flex-direction:column;align-items:center}#container{height:inherit !important;}`,
     downloadPageCheckBySelector: [
       "#downloadbtn",
       "#direct_link a",
@@ -3526,6 +4141,8 @@ const siteRules = {
       "footer",
       "#direct_link a img",
       "#content > h3",
+      "nav",
+      "span#countdown", // not needed, doesnt hinder download
     ],
     removeByRegex: [],
     hideElements: undefined,
@@ -3638,16 +4255,20 @@ const siteRules = {
       "_mgPageView659169",
       "_mgPageImp659169",
     ],
-    finalDownloadElementSelector: [["#direct_link a"]],
-    addHoverAbility: [["#direct_link a"]],
+    // finalDownloadElementSelector: [["#direct_link a"]],
+    // addHoverAbility: [["#direct_link a"]],
     addInfoBanner: [{ targetElement: "#direct_link", where: "afterend" }],
+    modifyButtons: [
+      ["a[rel*='noopener']", { customText: "Free Download" }],
+      ["#downloadbtn", { customText: "Create Download Link" }],
+      [
+        "#direct_link a",
+        { replaceWithForm: true, customText: "Start Download" },
+      ],
+    ],
     customScript() {
-      const firstBtn = this.$("a[rel*='noopener']");
-      firstBtn?.click();
-      const secondBtn = this.$("#downloadbtn");
-      secondBtn?.click();
       const finalBtn = this.$("#direct_link");
-      finalBtn.style.display = "";
+      finalBtn && (finalBtn.style.display = "");
     },
   },
   depositfiles: {
@@ -3672,6 +4293,7 @@ const siteRules = {
       "#confident_container",
       "div.string div.string_title",
       "img[src*='static.depositfiles.com']",
+      ".chousetype",
     ],
     removeByRegex: [{ query: "td.text", regex: /No Additional Fees!/gi }],
     hideElements: undefined,
@@ -3770,7 +4392,7 @@ const siteRules = {
       "new_delay",
       "download_frm",
       "load_form",
-      // "load_ajax",
+      "load_ajax",
       "checkJSPlugins",
       "check_recaptcha",
       "check_puzzlecaptcha",
@@ -3782,7 +4404,6 @@ const siteRules = {
       "check_cpchcaptcha",
       "sleep",
       "abSafeCall",
-      // "fid",
       "msg",
       "hLoadForm",
       "ads_zone40_init",
@@ -3808,40 +4429,49 @@ const siteRules = {
       "_0xa6ab",
       "_0x41de",
       "scroll_downloadblock",
+      "_0x2182",
+      "_0x4eb5",
+      "_0x401b",
+      "_0x1412",
+      "_0x126d",
+      "_0x16be",
+      "_0x5c7565",
     ],
-    finalDownloadElementSelector: [],
-    addHoverAbility: undefined,
-    addInfoBanner: [],
+    addInfoBanner: [{ targetElement: "#main", where: "beforeend" }],
     customScript() {
       this.addJQuery();
       this.$("#download_url")?.removeAttribute("style");
-      this.waitUntilSelector("#free_btn").then(() => {
-        document.body.insertAdjacentHTML(
-          "beforeend",
-          `<form id="customForm" method=post><input type="hidden" name="gateway_result" value="1"/><input type="hidden" name="asm" value="0"/></form>`
+      this.waitUntilSelector("div[class='downloadblock']").then((div) => {
+        // #free_btn
+        div.insertAdjacentHTML(
+          "afterend",
+          `<form id="customForm" method=post><input type="hidden" name="gateway_result" value="1"/><input type="hidden" name="asm" value="0"/><button id="custom-ss-button"></button</form>`
         );
-        document.forms.customForm.submit();
-      });
-      this.waitUntilGlobalVariable("jQuery").then(async () => {
-        await this.sleep(1000);
-        const _this = this;
-        // fetch(`/get_file.php?fid=${fid}&challenge=undefined&response=undefined&t=1`).then(res => res.text()).then(d => d.match(/action="([^"]+")\smethod/)?.[1])
-        $.ajax({
-          url: `/get_file.php?fid=${fid}&challenge=undefined&response=undefined&t=1`,
-          success(data) {
-            const tmp = $(data)
-              .filter((i, e) => e.tagName == "FORM")
-              .removeAttr("onsubmit");
-            const dl_link = tmp.attr("action");
-            _this.openNative(dl_link, "_self");
-            $("#download_container").html(tmp);
-            _this.$("#downloader_file_form a").href = dl_link;
-          },
-          error() {
-            console.log("error");
-          },
+        // document.forms.customForm.submit();
+        this.modifyButton("#custom-ss-button", {
+          customText: "Create Download Link",
+          props: { type: "submit" },
         });
       });
+
+      if (window.fid) {
+        const target = this.$("#download_container");
+        target && (target.innerHTML = "Loading...");
+        this.sleep(1000).then(() => {
+          fetch(
+            `/get_file.php?fid=${window.fid}&challenge=undefined&response=undefined&t=1`
+          )
+            .then((res) => res.text())
+            .then((html) => html.match(/action="([^"]+)"\smethod/)?.[1])
+            .then((dl_link) => {
+              target.innerHTML = "";
+              target.insertAdjacentElement(
+                "afterbegin",
+                this.makeSafeForm({ actionURL: dl_link })
+              );
+            });
+        });
+      }
     },
   },
   clicknupload: {
@@ -3863,6 +4493,8 @@ const siteRules = {
       "#M307473ScriptRootC1086510",
       ".sharetabs",
       "#sharebuttons",
+      "form > .superfast",
+      "#news_last",
     ],
     removeByRegex: [],
     hideElements: undefined,
@@ -3972,8 +4604,6 @@ const siteRules = {
       "i.js.loaded",
       "i-noref.js.loaded",
     ],
-    // finalDownloadElementSelector: [],
-    // addHoverAbility: [["button#downloadbtn.downloadbtn"]],
     addInfoBanner: [
       { targetElement: "div#content div.download", where: "afterend" },
     ],
@@ -4115,29 +4745,18 @@ const siteRules = {
       "_HistatsCounterGraphics_0_setValues",
       "emojione",
     ],
-    finalDownloadElementSelector: [],
-    // addHoverAbility: [["input[name='method_free']", false]],
     addInfoBanner: [{ targetElement: "form", where: "beforeend" }],
     modifyButtons: [
       [
         "input[name='method_free']",
-        { replaceWithTag: "button", customText: "Start Download" },
+        {
+          replaceWithTag: "button",
+          customText: "Start Download",
+          moveTo: { target: "form", position: "afterbegin" },
+        },
       ],
     ],
-    customScript() {
-      // this.$("form[action='']")?.submit();
-      this.$("input[name='method_free']")?.click();
-      this.$$("*").forEach((e) => e.setAttribute("style", ""));
-      // this.$$("body > div[id]")?.[1];
-
-      // Allow time for hCaptcha to load
-      // this.waitUntilGlobalVariable("hcaptcha").then(() =>
-      //   hCaptchaListener(this.$("form[name='F1']"))
-      // );
-      // this.waitUntilGlobalVariable("Tawk_Window", "app", "$el").then((ele) =>
-      //   ele.remove()
-      // );
-    },
+    customScript() {},
   },
   veryfiles: {
     host: ["veryfiles.com"],
@@ -4250,21 +4869,19 @@ const siteRules = {
       "ampInaboxPositionObserver",
       "ampInaboxFrameOverlayManager",
     ],
-    finalDownloadElementSelector: [["#direct_link a"]],
-    addHoverAbility: [["button#downloadbtn", true], ["#direct_link a"]],
     addInfoBanner: [
       { targetElement: ".blockpage", where: "beforeend" },
       { targetElement: "#commonId", where: "beforeend" },
     ],
+    modifyButtons: [
+      [
+        "button#downloadbtn",
+        { requiresCaptcha: true, requiresTimer: true, makeListener: true },
+      ],
+      ["#direct_link a", { replaceWithForm: true }],
+    ],
     createCountdown: { element: ".seconds" },
-    customScript() {
-      this.waitUntilGlobalVariable("grecaptcha").then(() =>
-        this.addCaptchaListener(
-          document.forms.F1,
-          +this.$(".seconds").innerText || 10
-        )
-      );
-    },
+    customScript() {},
   },
   douploads: {
     host: ["douploads.net"],
@@ -4285,6 +4902,7 @@ const siteRules = {
       "#news_last",
       "div.container.page.downloadPage > div > div.col-md-8.mt-5",
       "center",
+      "#downloadBtnClick",
     ],
     removeByRegex: [
       { query: ".download_method", regex: /fast download/gi },
@@ -4369,24 +4987,23 @@ const siteRules = {
       "zfgloadedpopup",
       "ppuWasShownFor2234052",
     ],
-    finalDownloadElementSelector: [[".container.downloadPage > .row a.btn"]],
-    addHoverAbility: [
-      ["button#downloadbtn", true],
-      ["button#downloadBtnClick", true],
-      [".container.downloadPage > .row a.btn", false],
-    ],
     addInfoBanner: [
       { targetElement: ".downloadPage > .row", where: "beforeend" },
     ],
+    modifyButtons: [
+      [
+        "button#downloadbtn",
+        {
+          requiresCaptcha: true,
+          requiresTimer: true,
+          makeListener: true,
+          props: { style: "", type: "submit" },
+        },
+      ],
+      [".container.downloadPage > .row a.btn", { replaceWithForm: true }],
+    ],
     createCountdown: { element: ".seconds" },
     customScript() {
-      this.interceptAppendChild((args) => {
-        if (args[0]?.style?.zIndex.match(/68015990|999999/)) {
-          this.logDebug("Blocked stupid thing");
-          return false;
-        }
-        // this.origAppendChild.apply(this, arguments);
-      });
       // Styling
       this.$("body").classList.remove("white");
       this.$("body").classList.add("dark");
@@ -4408,42 +5025,15 @@ const siteRules = {
         return;
       }
 
-      // Automation
-      this.$("button[name='method_free']")?.click();
-
-      this.waitUntilSelector("button#downloadbtn").then((dl_btn) => {
-        dl_btn.removeAttribute("style");
+      // aesthetics
+      this.$$(".col-md-4").forEach((el) => {
+        el.classList.replace("col-md-4", "col-md-12");
       });
-      this.waitUntilSelector("html > div").then((div) => {
-        div.remove();
-      });
-      this.waitUntilSelector(".it-client").then((div) => {
-        div.remove();
-      });
-      this.waitUntilSelector(
-        "div.container.page.downloadPage .col-md-4 a"
-      ).then((div) => {
-        // trick to remove anonymous event listeners (malicious)
-        // https://stackoverflow.com/a/32809957
-        document.body.outerHTML = document.body.outerHTML;
-      });
-      this.waitUntilGlobalVariable("grecaptcha").then(
-        () => this.addCaptchaListener(document.forms.F1, 10)
-        // this.addCaptchaListener(document.forms.F1, +this.$(".seconds").innerText || 10);
-      );
-      this.ifElementExists(
-        "body > div.container.pt-5.page.downloadPage > div > div.col-md-4.mt-5",
-        (query) => this.$(query)?.classList.replace("col-md-4", "col-12")
-      );
-      this.ifElementExists(
-        ".container.pt-5.page.downloadPage > .row .col-md-4.mt-5.text-center",
-        (query) => this.$(query)?.classList.replace("col-md-4", "col-12")
-      );
     },
   },
   upfiles: {
     host: ["upfiles.io", "upfiles.com"],
-    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}#container{background:#121212!important}.download_box{background-color:#323232!important}.bg-white{background:#121212!important}`,
+    customStyle: `html,body,.bg-white{background:#121212!important;color:#dfdfdf!important}#container{background:#121212!important}.download_box{background-color:#323232!important}`,
     downloadPageCheckBySelector: [
       "button#method_free",
       "button#downloadbtn",
@@ -4465,7 +5055,6 @@ const siteRules = {
       "*[id^=ad]",
       "div.divider",
       "iframe:not([src*='recaptcha'])",
-      // "iframe[class][scrolling][sandbox]",
       "body > div.container",
     ],
     removeByRegex: [{ query: "body > div.container", regex: /what is the/gi }],
@@ -4538,14 +5127,14 @@ const siteRules = {
       "_0xa6ab",
       "_0x41de",
     ],
-    finalDownloadElementSelector: [
-      ["div a.btn-download.get-link[href^='http']"],
+    addInfoBanner: [{ targetElement: ".container", where: "beforeend" }],
+    modifyButtons: [
+      [
+        "form button#invisibleCaptchaShortlink",
+        { requiresCaptcha: true, makeListener: true },
+      ],
+      ["form button[type='submit']:not(#invisibleCaptchaShortlink)"],
     ],
-    addHoverAbility: [
-      ["form button[type='submit']:not(#invisibleCaptchaShortlink)", false],
-      ["form button#invisibleCaptchaShortlink", true],
-    ],
-    addInfoBanner: [{ targetElement: "form.text-center", where: "beforeend" }],
     createCountdown: { element: "#timer.timer" },
     customScript() {
       this.window.onbeforeunload = function () {};
@@ -4560,7 +5149,9 @@ const siteRules = {
       this.waitUntilSelector("form#go-link").then(async (form) => {
         const url = form.action;
         const body = {};
+        const btn = this.$("a.get-link");
         form.querySelectorAll("input").forEach((e) => (body[e.name] = e.value));
+        this.modifyButton(btn, { requiresTimer: true, makeListener: true });
         await this.sleep(10 * 1000);
         await fetch(url, {
           headers: {
@@ -4581,44 +5172,10 @@ const siteRules = {
         })
           .then((res) => res.json())
           .then((data) => {
-            const btn = this.$("a.get-link");
             btn.href = data.url;
-            btn.classList.remove("disabled");
-            btn.innerText = "Download";
+            btn.innerText = "Start Download";
           });
       });
-      /*
-      This was needed before destroyWindowFunctions to stop the ads, but not anymore.
-      Keeping it just in case.
-      */
-      // this.waitUntilSelector("iframe[class][scrolling][sandbox]").then((ele) =>
-      //   ele.remove()
-      // );
-
-      // // stop script from adding malicious redirects over top of google recaptcha
-      // const appChild = document.body.appendChild;
-      // document.body.appendChild = function (x) {
-      //   // stupid overlay has hard-coded z-index of 2147483647
-      //   if (x?.style.zIndex == "2147483647") {
-      //     return;
-      //   }
-      //   appChild.apply(this, arguments);
-      // };
-
-      // page 1
-      this.$("section.form-main.file-main form:not([id])")?.submit();
-
-      // page 2
-      // if (!this.$("#captchaDownload")) {
-      //   this.$("#invisibleCaptchaShortlink")?.click();
-      // } else {
-      //   this.waitUntilGlobalVariable("grecaptcha").then(() =>
-      //     googleRecaptchaListener(document.forms?.["file-captcha"])
-      //   );
-      // }
-      this.waitUntilGlobalVariable("grecaptcha").then(() =>
-        this.addCaptchaListener(document.forms?.["file-captcha"])
-      );
     },
   },
   tusfiles: {
@@ -4664,16 +5221,14 @@ const siteRules = {
       "gaGlobal",
       "gaData",
     ],
-    finalDownloadElementSelector: [],
-    addHoverAbility: [],
     addInfoBanner: [{ targetElement: "form[name='F1']", where: "beforebegin" }],
-    createCountdown: {},
     modifyButtons: [
       [
         "button#downloadbtn",
         { customText: "Start Download", makeListener: true },
       ],
     ],
+    createCountdown: {},
     customScript() {},
   },
   centfile: {
@@ -4779,24 +5334,13 @@ const siteRules = {
       "closure_lm_155599",
       "google_trust_token_operation_promise",
     ],
-    finalDownloadElementSelector: [],
-    addHoverAbility: [],
     addInfoBanner: [{ targetElement: "form[name='F1']", where: "afterend" }],
     createCountdown: {},
     modifyButtons: [
       [
-        "form[name='F1'] button[name='method_free']",
-        {
-          customText: "Free Download",
-          makeListener: true,
-          moveTo: { target: "form[name='F1']", position: "beforeend" },
-          requiresCaptcha: true,
-        },
-      ],
-      [
         "form[name='F1'] input[name='method_free']",
         {
-          customText: "Free Download",
+          customText: "Create Download Link",
           makeListener: true,
           moveTo: { target: "form[name='F1']", position: "beforeend" },
           requiresCaptcha: true,
@@ -4830,7 +5374,6 @@ const siteRules = {
         this.findParentElementByTagName(dl_btn, "center")?.remove?.();
         dl_btn.remove();
       });
-      this.waitUntilSelector(".ss-btn-ready").then((btn) => btn?.click());
     },
   },
   fastclick: {
@@ -5004,7 +5547,7 @@ const siteRules = {
   },
   nitro: {
     host: ["nitro.download"],
-    customStyle: `html,body,#container,legend,#view,h1{background:#121212!important;color:#dfdfdf!important}#container{box-shadow:unset!important}a{color:#3096fb!important}`,
+    customStyle: `html,body,#container,legend,#view,h1{background:#121212!important;color:#dfdfdf!important}#container{box-shadow:unset!important}a{color:#3096fb!important}#beforeReCaptcha{font-size:28px!important;}`,
     downloadPageCheckBySelector: ["button#slow-download", "#startFreeDownload"],
     downloadPageCheckByRegex: [],
     remove: [
@@ -5020,52 +5563,692 @@ const siteRules = {
       ".noticeMessage",
       "#popupContent",
       "#triggerPopup",
+      ".adsbygoogle",
       // "#beforeReCaptcha"
     ],
     removeByRegex: [],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
-    destroyWindowFunctions: [],
-    finalDownloadElementSelector: [],
-    addHoverAbility: [],
-    addInfoBanner: [],
+    destroyWindowFunctions: [
+      "gtag",
+      "dataLayer",
+      "adsbygoogle",
+      "pop3",
+      "timeCirclesCallback",
+      "TC_Instance_List",
+      // "timerSeconds",
+      "$button",
+      // "fileId",
+      "url",
+      // "startFreeDownload",
+      // "setCookie",
+      "swfobject",
+      "RandHash2",
+      "lang",
+      "tlite",
+      "openAlert",
+      "closeAlert",
+      "$innerbox",
+      "google_tag_manager",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_reactive_ads_global_state",
+      "_gfp_a_",
+      "google_sa_queue",
+      "google_sl_win",
+      "google_process_slots",
+      "google_spfd",
+      "google_unique_id",
+      "google_sv_map",
+      "google_lpabyc",
+      "google_tag_data",
+      "gaGlobal",
+      "onYouTubeIframeAPIReady",
+      "google_user_agent_client_hint",
+      "Goog_AdSense_getAdAdapterInstance",
+      "Goog_AdSense_OsdAdapter",
+      "google_sa_impl",
+      "google_persistent_state_async",
+      "googleToken",
+      "googleIMState",
+      "_gfp_p_",
+      "processGoogleToken",
+      "google_global_correlator",
+      "google_prev_clients",
+      "goog_pvsid",
+      "google_jobrunner",
+      "ampInaboxIframes",
+      "ampInaboxPendingMessages",
+      "goog_sdr_l",
+      "googletag",
+      "GoogleGcLKhOms",
+      "google_image_requests",
+    ],
+    addInfoBanner: [{ targetElement: "#container", where: "beforeend" }],
     createCountdown: { timer: 120 },
     modifyButtons: [
-      ["button#slow-download", {}],
+      ["button#slow-download"],
       [
         "button#sendReCaptcha",
-        { customText: "Free Download", requiresCaptcha: true },
+        {
+          customText: "Free Download",
+          requiresCaptcha: true,
+          requiresTimer: true,
+          makeListener: true,
+          eventHandlers: {
+            click(e) {
+              e.preventDefault();
+              if (!this.classList.contains("ss-btn-ready")) {
+                return;
+              }
+              fetch("https://nitro.download/ajax/freeDownload.php", {
+                headers: {
+                  accept: "*/*",
+                  "accept-language": "en-US,en;q=0.9",
+                  "content-type":
+                    "application/x-www-form-urlencoded; charset=UTF-8",
+                  "sec-fetch-dest": "empty",
+                  "sec-fetch-mode": "cors",
+                  "sec-fetch-site": "same-origin",
+                  "x-requested-with": "XMLHttpRequest",
+                },
+                body: `method=fetchDownload&g-recaptcha-response=${window?.hcaptcha?.getResponse?.()}&h-captcha-response=${window?.hcaptcha?.getResponse?.()}`,
+                method: "POST",
+                mode: "cors",
+                credentials: "include",
+              })
+                .then((res) => res.text())
+                .then((anchor) => {
+                  const dl_link = anchor.match(/"(https:\/\/[^"]+)"/)?.[1];
+                  if (dl_link) {
+                    document.querySelector("#cpatchaAndButton").innerHTML = "";
+                    document
+                      .querySelector("#cpatchaAndButton")
+                      .insertAdjacentElement(
+                        "afterbegin",
+                        siteScrubber.makeSafeForm({ actionURL: dl_link })
+                      );
+                  } else {
+                    console.log("Failed to get dl_link", dl_link);
+                  }
+                });
+            },
+          },
+        },
       ],
-      [
-        "button#beforeStartTimerBtn",
-        { customText: "Start Timer", requiresCaptcha: true },
-      ],
+      // ["button#beforeStartTimerBtn", { customText: "Start Timer" }],
     ],
     customScript() {
+      if (this.$("#fileId")) {
+        const headers = {
+          accept: "*/*",
+          "accept-language": "en-US,en;q=0.9",
+          "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+          "sec-fetch-dest": "empty",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-site": "same-origin",
+          "x-requested-with": "XMLHttpRequest",
+        };
+        fetch("https://nitro.download/ajax/setCookie.php", {
+          headers: headers,
+          body: `fileId=${this.$("#fileId").value}`,
+          method: "POST",
+          mode: "cors",
+          credentials: "include",
+        }).then(() => {
+          fetch("https://nitro.download/ajax/freeDownload.php", {
+            headers: headers,
+            body: `method=startTimer&fileId=${this.$("#fileId").value}`,
+            method: "POST",
+            mode: "cors",
+            credentials: "include",
+          })
+            .then((res) => res.text())
+            .then((data) => {
+              if (data == "1") {
+                this.$(
+                  "#beforeReCaptcha"
+                ).innerHTML = `Wait <span class="seconds">120</span> seconds`;
+                this.createCountdown({ element: ".seconds" });
+              } else {
+                this.$("#beforeReCaptcha").innerHTML = data;
+              }
+            });
+        });
+      }
+
       this.waitUntilSelector("button#slow-download").then((btn) => {
         const form = btn.parentElement;
-        // btn = this.modifyButton(btn, {})
-        this.$("#container")?.insertAdjacentElement("afterbegin", form);
-        this.$("#container > .content")?.remove();
-      });
-      this.waitUntilSelector("form#startFreeDownload").then((form) => {
-        // btn = this.modifyButton(btn, {})
-        return;
-        form.style = "";
         this.$("#container")?.insertAdjacentElement("afterbegin", form);
         this.$("#container > .content")?.remove();
       });
       this.waitUntilSelector("#reCaptcha").then((div) => {
         div.style = "";
       });
-      this.waitUntilSelector("a#download").then((btn) => {
-        this.modifyButton(btn, {
-          replaceWithForm: true,
-          customText: "Start Download",
-        });
+    },
+  },
+  intoupload: {
+    host: ["intoupload.net"],
+    customStyle: `html,body,.content{background:#121212!important;color:#dfdfdf!important}.downloadarea,.downloadinfo,.title{background:#212121!important;}.content{border:unset!important;}`,
+    downloadPageCheckBySelector: ["#downloadBtnClick", "#direct_link"],
+    downloadPageCheckByRegex: [/available for your IP/gi],
+    remove: [
+      "#fb-root",
+      "#sidebarphone",
+      "#intro",
+      "#socialmedia",
+      "footer",
+      "#footer2",
+      "#banner_ad",
+      "#outbrain-paid",
+      ".txt",
+      "[class^=banner]",
+      "div.checkbox.checkbox-info.off",
+      ".reportfile",
+      "#downloadBtnClick",
+      "table",
+      "center",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "setPagination",
+      "_gaq",
+      "_gat",
+      "gaGlobal",
+      "share_facebook",
+      "share_twitter",
+      "share_gplus",
+      "share_vk",
+      "timeout",
+      "delComment",
+      "player_start",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_plmetrics",
+      "google_reactive_ads_global_state",
+      "adsbygoogle",
+      "_gfp_a_",
+      "google_sa_queue",
+      "google_sl_win",
+      "google_process_slots",
+      "google_spfd",
+      "google_unique_id",
+      "google_sv_map",
+      "ddUeMxctMpis",
+      "yQTyIzoEOE",
+      "dakPYcnsXg",
+      "fPlRMmBMBE",
+      "JXhPPkjStt",
+      "jVMvbskSNn",
+      "jVDnCMNphL",
+      "vDgRctdjjq",
+      "c2",
+      "c1",
+      "hnfy8HUSy6uh",
+      "MlLWbJZpcX",
+      "google_user_agent_client_hint",
+      "Goog_AdSense_getAdAdapterInstance",
+      "Goog_AdSense_OsdAdapter",
+      "google_sa_impl",
+      "google_persistent_state_async",
+      "googleToken",
+      "googleIMState",
+      "_gfp_p_",
+      "processGoogleToken",
+      "google_global_correlator",
+      "google_prev_clients",
+      "goog_pvsid",
+      "google_jobrunner",
+      "ampInaboxIframes",
+      "ampInaboxPendingMessages",
+      "goog_sdr_l",
+      "FB",
+      "closure_lm_915809",
+      "wdbvrjbm3ml",
+      "zfgformats",
+      "webpushlogs",
+      "initIPP",
+      "GoogleGcLKhOms",
+      "google_image_requests",
+    ],
+    addInfoBanner: [
+      { targetElement: ".mngez_downloadpage1", where: "beforeend" },
+      { targetElement: "#mngez_download2", where: "beforeend" },
+    ],
+    modifyButtons: [
+      [
+        "#downloadbtn",
+        { requiresCaptcha: true, requiresTimer: true, makeListener: true },
+      ],
+      [
+        "#direct_link > a",
+        { replaceWithForm: true, customText: "Start Download" },
+      ],
+    ],
+    createCountdown: { element: ".seconds" },
+    customScript() {
+      this.$$(
+        ".col-md-8, .col-lg-8, .col-md-6, .col-lg-6, .col-md-4, .col-lg-4"
+      ).forEach((el) => {
+        el.classList.replace("col-lg-4", "col-lg-12");
+        el.classList.replace("col-lg-6", "col-lg-12");
+        el.classList.replace("col-lg-8", "col-lg-12");
+        el.classList.replace("col-md-4", "col-md-12");
+        el.classList.replace("col-md-6", "col-md-12");
+        el.classList.replace("col-md-8", "col-md-12");
       });
     },
+  },
+  filerio: {
+    host: ["filerio.in"],
+    customStyle: `html,body,.bg-white,.download_box{background:#121212!important;color:#dfdfdf!important}.download_box{display:flex!important;flex-direction:column!important;align-items:center!important;border:unset!important;}`,
+    downloadPageCheckBySelector: ["input[name='method_free']", ".download_box"],
+    downloadPageCheckByRegex: [],
+    remove: [
+      "nav",
+      "body > div.container.py-5",
+      "footer",
+      "br",
+      ".features__section",
+      ".sharetabs",
+      "#content",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "setPagination",
+      "_gaq",
+      "_gat",
+      "gaGlobal",
+      "BuildButtons",
+      "__core-js_shared__",
+      "feather",
+      "LAST_CORRECT_EVENT_TIME",
+      "_533899577",
+      "_2984300562",
+      "iinf",
+      "delComment",
+      "player_start",
+      "showFullScreen",
+      "closure_lm_672589",
+      "setCookie",
+      "getCookie",
+      "eraseCookie",
+      "keepID",
+    ],
+    addInfoBanner: [
+      { targetElement: "form:not([name='F1'])" },
+      { targetElement: ".download_box" },
+    ],
+    modifyButtons: [
+      [
+        "form:not([name='F1']) input[name='method_free']",
+        { replaceWithTag: "button", customText: "Free Download" },
+      ],
+      [
+        "button#downloadbtn",
+        {
+          replaceWithTag: "button",
+          requiresCaptcha: true,
+          makeListener: true,
+          customText: "Create Download Link",
+        },
+      ],
+      [".download_box > a", { replaceWithForm: true }],
+    ],
+    createCountdown: "",
+    customScript() {
+      this.$$(
+        ".col-md-8, .col-lg-8, .col-md-6, .col-lg-6, .col-md-4, .col-lg-4"
+      ).forEach((el) => {
+        el.classList.replace("col-lg-4", "col-lg-12");
+        el.classList.replace("col-lg-6", "col-lg-12");
+        el.classList.replace("col-lg-8", "col-lg-12");
+        el.classList.replace("col-md-4", "col-md-12");
+        el.classList.replace("col-md-6", "col-md-12");
+        el.classList.replace("col-md-8", "col-md-12");
+      });
+    },
+  },
+  filelox: {
+    host: ["filelox.com"],
+    customStyle: `html,body,.file-info,h4{background:#121212!important;color:#dfdfdf!important}`,
+    downloadPageCheckBySelector: ["#btn_method_free", "#downloadbtn"],
+    downloadPageCheckByRegex: [],
+    remove: [
+      "nav",
+      "footer",
+      ".download-page > center",
+      ".table-download table tr:nth-child(-n+10)",
+      "#btn_method_premium",
+      "#btn_method_free ~ *",
+      "td.descr",
+      ".promo-container",
+      ".report-abuse",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "_gaq",
+      "setPagination",
+      "atOptions",
+      "_gat",
+      "gaGlobal",
+      "delComment",
+      "player_start",
+      "timeout",
+      "k",
+      "_v551ygr5lqm",
+      "0z1mjv6rdbkr",
+      "zfgformats",
+      "setImmediate",
+      "clearImmediate",
+      "_joetzrvb",
+      "_gapnvzv",
+      "clipboard",
+      "_Hasync",
+      "chfh",
+      "chfh2",
+      "_HST_cntval",
+      "Histats",
+      "webpushlogs",
+      "initIPP",
+      "_HistatsCounterGraphics_9_setValues",
+      "_value_RETURN_BUILDER",
+      "_HistatsCounterGraphics_9",
+      "histats_canvascounters_base.js",
+      "a",
+      "cv",
+      "Tynt",
+      "_dtspv",
+      "_33Across",
+      "__uspapi",
+      "__connect",
+      "lotame_3825",
+      "char",
+      "lotameIsCompatible",
+      "lt3825_ba",
+      "lt3825_b",
+      "lt3825_c",
+      "lt3825_ca",
+      "lt3825_d",
+      "lt3825_e",
+      "lt3825_da",
+      "lt3825_ea",
+      "lt3825_fa",
+      "lt3825_",
+      "lt3825_4",
+      "lt3825_aa",
+      "lt3825_a",
+      "lt3825_f",
+      "lt3825_g",
+      "lt3825_h",
+      "lt3825_i",
+      "lt3825_j",
+      "lt3825_l",
+      "lt3825_ga",
+      "lt3825_k",
+      "lt3825_m",
+      "lt3825_n",
+      "lt3825_o",
+      "lt3825_p",
+      "lt3825_q",
+      "lt3825_r",
+      "lt3825_s",
+      "lt3825_t",
+      "lt3825_u",
+      "lt3825_ha",
+      "lt3825_ia",
+      "lt3825_w",
+      "lt3825_ja",
+      "lt3825_x",
+      "lt3825_y",
+      "lt3825_v",
+      "lt3825_z",
+      "lt3825_A",
+      "lt3825_B",
+      "lt3825_C",
+      "lt3825_D",
+      "lt3825_E",
+      "lt3825_F",
+      "lt3825_G",
+      "lt3825_H",
+      "lt3825_I",
+      "lt3825_J",
+      "lt3825_L",
+      "lt3825_M",
+      "lt3825_N",
+      "lt3825_K",
+      "lt3825_ka",
+      "lt3825_la",
+      "lt3825_P",
+      "lt3825_O",
+      "lt3825_Q",
+      "lt3825_R",
+      "lt3825_S",
+      "lt3825_T",
+      "lt3825_ma",
+      "lt3825_na",
+      "lt3825_oa",
+      "lt3825_pa",
+      "lt3825_U",
+      "lt3825_V",
+      "lt3825_W",
+      "lt3825_qa",
+      "lt3825_sa",
+      "lt3825_ra",
+      "lt3825_X",
+      "lt3825_ta",
+      "lt3825_ua",
+      "lt3825_Y",
+      "lt3825_Z",
+      "lt3825__",
+      "lt3825_va",
+      "lt3825_wa",
+      "lt3825_xa",
+      "lt3825_ya",
+      "lt3825_0",
+      "lt3825_za",
+      "lt3825_Aa",
+      "lt3825_Ba",
+      "lt3825_1",
+      "lt3825_Da",
+      "lt3825_Ca",
+      "lt3825_Ea",
+      "lt3825_Fa",
+      "lt3825_Ga",
+      "lt3825_Ha",
+      "lt3825_2",
+      "lt3825_3",
+      "lt3825_Ia",
+      "lt3825_Ja",
+      "lt3825_Ka",
+      "lt3825_La",
+      "lt3825_Ma",
+      "lt3825_Na",
+      "lt3825_Oa",
+      "lt3825_Pa",
+      "lt3825_Qa",
+      "lt3825_5",
+      "lt3825_6",
+      "lt3825_Ta",
+      "lt3825_Ua",
+      "lt3825_Sa",
+      "lt3825_Ra",
+      "lt3825_Wa",
+      "lt3825_Va",
+      "lt3825_Ya",
+      "lt3825_Xa",
+      "lt3825_7",
+      "lt3825_Za",
+      "lt3825__a",
+      "lt3825_0a",
+      "lt3825_1a",
+      "lt3825_2a",
+      "lt3825_4a",
+      "lt3825_7a",
+      "lt3825_6a",
+      "lt3825_3a",
+      "lt3825_9a",
+      "lt3825_5a",
+      "lt3825_8a",
+      "lt3825_ab",
+      "lt3825_$a",
+      "lt3825_bb",
+      "lt3825_8",
+      "lt3825_cb",
+      "lt3825_db",
+      "lt3825_eb",
+      "lt3825_fb",
+      "lt3825_gb",
+      "lt3825_hb",
+      "lt3825_ib",
+      "lt3825_kb",
+      "lt3825_$",
+      "lt3825_jb",
+      "lt3825_lb",
+      "lt3825_9",
+      "_pop",
+      "p$00a",
+      "_0x5d4b",
+      "_0x208c",
+      "p$00a1633309931319zz",
+      "decrypt",
+      "w71111",
+      "K5gg",
+      "w2r",
+      "s5gg",
+      "handleException",
+      "B6cc",
+      "g6cc",
+      "x6cc",
+      "z3xx",
+      "c3xx",
+      "k3xx",
+      "T9II",
+      "_cl6rbagn4kl6817yb9eplb",
+      "__abstract",
+      "__optimize",
+      "__residual",
+      "_clkqnea5gc6mdf08c08j2z",
+      "_clhqo2t2gmc5p1amjisyc7",
+      "detectZoom",
+      "iframe",
+      "where",
+      "win",
+      "_pao",
+      "popns",
+      "pop_cdn",
+      "d7RR",
+      "k7RR",
+      "n7RR",
+      "N6CC",
+      "f6CC",
+      "y6CC",
+      "b133",
+      "IOarzRhPlP",
+      "x1FF",
+      "b1FF",
+      "n1FF",
+      "w922",
+      "h922",
+      "P922",
+      "$jscomp",
+      "$jscomp$lookupPolyfilledValue",
+      "AdscoreInit",
+      "pako",
+      "txt",
+      "ed",
+      "t",
+      "property",
+      "brand",
+      "r",
+      "g",
+      "b",
+      "bt",
+      "_0x173b",
+      "_0x2697",
+      "LieDetector",
+      "atAsyncContainers",
+      "_0x126d",
+      "_0x16be",
+      "_0x5c7565",
+      "mm",
+      "AaDetector",
+      "placementKey",
+      "rp",
+      "_0x5133",
+      "_0x1351",
+      "_0x1b79d4",
+      "_0xa6ab",
+      "_0x41de",
+      "sdif2zyaz1o",
+    ],
+    addInfoBanner: [{ targetElement: "#container" }],
+    modifyButtons: [
+      [
+        "#btn_method_free",
+        { replaceWithTag: "button", customText: "Free Download" },
+      ],
+      [
+        "#downloadbtn",
+        {
+          requiresTimer: true,
+          makeListener: true,
+          customText: "Start Download",
+          props: { type: "submit" },
+        },
+      ],
+    ],
+    createCountdown: { element: ".seconds" },
+    customScript() {},
+  },
+  ddownload: {
+    host: ["ddownload.com"],
+    customStyle: `html,body,.file-info,h4{background:#121212!important;color:#dfdfdf!important}`,
+    downloadPageCheckBySelector: ["#downloadbtn", ".download-page"],
+    downloadPageCheckByRegex: [],
+    remove: [
+      "nav",
+      "footer",
+      ".plans-wrapper",
+      ".plan-header",
+      ".report-abuse",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [],
+    addInfoBanner: [{ targetElement: "#container" }],
+    modifyButtons: [
+      [
+        "#downloadbtn",
+        {
+          requiresCaptcha: true,
+          makeListener: true,
+          customText: "Create Download Link",
+        },
+      ],
+    ],
+    createCountdown: "",
+    customScript() {},
   },
   NEWSITE: {
     host: [],
@@ -5078,8 +6261,6 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [],
-    finalDownloadElementSelector: [],
-    addHoverAbility: [],
     addInfoBanner: [],
     createCountdown: "",
     modifyButtons: [],
@@ -5098,34 +6279,14 @@ for (const site in siteRules) {
       }
     })
   ) {
-    // const specialName =
-    //   "SS" + Math.floor(Math.random() * 982451653).toString(36);
-    // oSiteScrubber = window[specialName] = new SiteScrubber(currSiteRules);
-    // oSiteScrubber.setup();
     window.Object.defineProperty(window, "siteScrubber", {
       enumerable: false,
       writable: false,
       configurable: false,
       value: new SiteScrubber(currSiteRules),
     });
-    // window["siteScrubber"] = new SiteScrubber(currSiteRules);
     siteScrubber.setup();
     break;
-    // const currSiteRules = siteRules[site];
-    // this.logDebug(`Using site rules for site: ${site}`);
-    // return this.setup();
-
-    // this.addCustomCSSStyle(this.currSiteRules?.customStyle);
-    // if (
-    //   this.document.readyState === "complete" ||
-    //   this.document.readyState === "interactive"
-    // ) {
-    //   this.applyRules();
-    // } else {
-    //   this.window.addEventListener("DOMContentLoaded", () => {
-    //     this.applyRules();
-    //   });
-    // }
   }
 }
 
