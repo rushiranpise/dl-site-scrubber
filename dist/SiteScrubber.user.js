@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    PrimePlaya24
-// @version      2.0.0b5
+// @version      2.0.0b7
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -93,30 +93,33 @@ class SiteScrubber {
     this._timeouts = {};
 
     this.currSiteRules = rules;
-    // this.siteRules = siteRules;
-    // this.addCustomCSSStyle(this.siteRules.customStyle);
+    this.ssCSSStyles = `.ss-alert{color:#8a6d3b;background-color:#fcf8e3;border-color:#faebcc;width:100%;padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:4px;text-align:center}.ss-mt-5{margin-top:5em}.ss-btn{display:inline-block;padding:24px 32px;font-family:"Lucida Sans","Lucida Sans Regular","Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;border:unset;color:#dfdfdf;text-transform:uppercase;font-size:24px;letter-spacing:.15em;transition:width .1s linear;position:relative;overflow:hidden;z-index:1;cursor:pointer}.ss-btn:active{transform:scale(.975)}.ss-btn:focus{outline:0}.ss-w-100{width:100%}.ss-btn-ready:after{content:"";position:absolute;bottom:0;left:0;width:100%;height:100%;transition:width .1s linear;z-index:-2}.ss-btn-ready:before{content:"";position:absolute;bottom:0;left:0;width:0%;height:100%;background-color:#11a800;transition:width .1s linear;transition:opacity .1s linear;z-index:-1}.ss-btn-ready:hover:before{width:100%;transition:width 2s linear}.ss-animated-button:active{transform:scale(.975)}.ss-animated-button:focus{outline:0}.ss-animated-button{background:linear-gradient(-30deg,#530000 50%,#340000 50%);padding:20px 40px;margin:12px;display:inline-block;-webkit-transform:translate(0,0);transform:translate(0,0);overflow:hidden;color:#f7d4d4;font-size:20px;letter-spacing:2.5px;text-align:center;text-transform:uppercase;text-decoration:none;-webkit-box-shadow:0 20px 50px rgba(0,0,0,.5);box-shadow:0 20px 50px rgba(0,0,0,.5);font-family:"Lucida Sans","Lucida Sans Regular","Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;border:unset;transition:width .1s linear;position:relative;z-index:1;cursor:pointer}.ss-animated-button.ss-btn-ready{background:linear-gradient(-30deg,#0e5300 50%,#093400 50%);color:#d5f7d4}.ss-animated-button:not(.ss-btn-ready)::before{content:"Not Ready";position:absolute;top:0;left:0;width:100%;font-size:16px;height:100%;opacity:0;-webkit-transition:.2s opacity ease-in-out;transition:.2s opacity ease-in-out}.ss-animated-button:hover::before{opacity:.2}.ss-animated-button span{position:absolute}.ss-animated-button span:nth-child(1){top:0;left:0;width:100%;height:2px;-webkit-animation:2s animateTop linear infinite;animation:2s animateTop linear infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(1){background:-webkit-gradient(linear,right top,left top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to left,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(1){background:-webkit-gradient(linear,right top,left top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to left,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(2){top:0;right:0;height:100%;width:2px;-webkit-animation:2s animateRight linear -1s infinite;animation:2s animateRight linear -1s infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(2){background:-webkit-gradient(linear,left bottom,left top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to top,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(2){background:-webkit-gradient(linear,left bottom,left top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to top,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(3){bottom:0;left:0;width:100%;height:2px;-webkit-animation:2s animateBottom linear infinite;animation:2s animateBottom linear infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(3){background:-webkit-gradient(linear,left top,right top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to right,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(3){background:-webkit-gradient(linear,left top,right top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to right,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(4){top:0;left:0;height:100%;width:2px;-webkit-animation:2s animateLeft linear -1s infinite;animation:2s animateLeft linear -1s infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(4){background:-webkit-gradient(linear,left top,left bottom,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to bottom,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(4){background:-webkit-gradient(linear,left top,left bottom,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to bottom,rgba(14,43,8,0),#01ce0b)}@keyframes animateBottom{0%{-webkit-transform:translateX(-100%);transform:translateX(-100%)}100%{-webkit-transform:translateX(100%);transform:translateX(100%)}}@keyframes animateLeft{0%{-webkit-transform:translateY(-100%);transform:translateY(-100%)}100%{-webkit-transform:translateY(100%);transform:translateY(100%)}}@keyframes animateTop{0%{-webkit-transform:translateX(100%);transform:translateX(100%)}100%{-webkit-transform:translateX(-100%);transform:translateX(-100%)}}@keyframes animateRight{0%{-webkit-transform:translateY(100%);transform:translateY(100%)}100%{-webkit-transform:translateY(-100%);transform:translateY(-100%)}}`
   }
   setup() {
     this.logDebug("Initializing SiteScrubber...");
 
-    this.destroyWindowFunctions(this.currSiteRules?.destroyWindowFunctions);
-    this.addCustomCSSStyle(
-      `.ss-btn{display:inline-block;padding:24px 32px;font-family:"Lucida Sans","Lucida Sans Regular","Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;border:unset;color:#dfdfdf;text-transform:uppercase;font-size:24px;letter-spacing:.15em;transition:width .1s linear;position:relative;overflow:hidden;z-index:1}.ss-btn:active{transform:scale(.975)}.ss-btn:focus{outline:0}.ss-w-100{width:100%}.ss-btn-ready:after{content:"";position:absolute;bottom:0;left:0;width:100%;height:100%;transition:width .1s linear;z-index:-2}.ss-btn-ready:before{content:"";position:absolute;bottom:0;left:0;width:0%;height:100%;background-color:#11a800;transition:width .1s linear;transition:opacity .1s linear;z-index:-1}.ss-btn-ready:hover:before{width:100%;transition:width 2s linear}.ss-animated-button:active{transform:scale(.975)}.ss-animated-button:focus{outline:0}.ss-animated-button{background:linear-gradient(-30deg,#530000 50%,#340000 50%);padding:20px 40px;margin:12px;display:inline-block;-webkit-transform:translate(0,0);transform:translate(0,0);overflow:hidden;color:#f7d4d4;font-size:20px;letter-spacing:2.5px;text-align:center;text-transform:uppercase;text-decoration:none;-webkit-box-shadow:0 20px 50px rgba(0,0,0,.5);box-shadow:0 20px 50px rgba(0,0,0,.5);font-family:"Lucida Sans","Lucida Sans Regular","Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;border:unset;transition:width .1s linear;position:relative;z-index:1}.ss-animated-button.ss-btn-ready{background:linear-gradient(-30deg,#0e5300 50%,#093400 50%);color:#d5f7d4}.ss-animated-button:not(.ss-btn-ready)::before{content:"Not Ready";position:absolute;top:0;left:0;width:100%;font-size:16px;height:100%;opacity:0;-webkit-transition:.2s opacity ease-in-out;transition:.2s opacity ease-in-out}.ss-animated-button:hover::before{opacity:.2}.ss-animated-button span{position:absolute}.ss-animated-button span:nth-child(1){top:0;left:0;width:100%;height:2px;-webkit-animation:2s animateTop linear infinite;animation:2s animateTop linear infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(1){background:-webkit-gradient(linear,right top,left top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to left,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(1){background:-webkit-gradient(linear,right top,left top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to left,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(2){top:0;right:0;height:100%;width:2px;-webkit-animation:2s animateRight linear -1s infinite;animation:2s animateRight linear -1s infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(2){background:-webkit-gradient(linear,left bottom,left top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to top,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(2){background:-webkit-gradient(linear,left bottom,left top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to top,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(3){bottom:0;left:0;width:100%;height:2px;-webkit-animation:2s animateBottom linear infinite;animation:2s animateBottom linear infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(3){background:-webkit-gradient(linear,left top,right top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to right,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(3){background:-webkit-gradient(linear,left top,right top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to right,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(4){top:0;left:0;height:100%;width:2px;-webkit-animation:2s animateLeft linear -1s infinite;animation:2s animateLeft linear -1s infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(4){background:-webkit-gradient(linear,left top,left bottom,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to bottom,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(4){background:-webkit-gradient(linear,left top,left bottom,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to bottom,rgba(14,43,8,0),#01ce0b)}@keyframes animateBottom{0%{-webkit-transform:translateX(-100%);transform:translateX(-100%)}100%{-webkit-transform:translateX(100%);transform:translateX(100%)}}@keyframes animateLeft{0%{-webkit-transform:translateY(-100%);transform:translateY(-100%)}100%{-webkit-transform:translateY(100%);transform:translateY(100%)}}@keyframes animateTop{0%{-webkit-transform:translateX(100%);transform:translateX(100%)}100%{-webkit-transform:translateX(-100%);transform:translateX(-100%)}}@keyframes animateRight{0%{-webkit-transform:translateY(100%);transform:translateY(100%)}100%{-webkit-transform:translateY(-100%);transform:translateY(-100%)}}`
-    );
-    this.addCustomCSSStyle(
-      `.ss-alert-warning{color:#8a6d3b;background-color:#fcf8e3;border-color:#faebcc}.ss-alert{width:100%;padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:4px}.ss-col-md-12{width:100%}.ss-mt-5{margin-top:5em}.ss-text-center{text-align:center}`
-    );
+    if (
+      !this.checkIfDownloadPage(
+        this.currSiteRules?.downloadPageCheckBySelector,
+        this.currSiteRules?.downloadPageCheckByRegex
+      )
+    ) {
+      this.log("Did not match as a download page... Stopping.");
+      return;
+    } else {
+      this.log("Assuming this is a download page.");
+      this.destroyWindowFunctions(this.currSiteRules?.destroyWindowFunctions);
+      this.addCustomCSSStyle(this.ssCSSStyles);
+    }
+    // Wait till page is ready for the rest
     if (this.ssButtonWatchDog === true) {
       // Ready, so click/submit
       this.waitUntilSelector(".ss-btn-ready").then((ssBtn) => {
-        return this.log("WOULD'VE CLICKED ss-btn");
+        this.log("WOULD'VE CLICKED ss-btn", ssBtn);
         ssBtn.click();
       });
     }
-    if (
-      this.document.readyState === "complete" ||
-      this.document.readyState === "interactive"
-    ) {
+    if (["complete", "interactive"].indexOf(document.readyState) > -1) {
       this.logDebug("Site is ready, applying rules...");
       this.applyRules();
     } else {
@@ -133,11 +136,21 @@ class SiteScrubber {
     }
     return this;
   }
-  log(str) {
-    this.logNative(`[SS-LOG] ${str}`);
+  log(str, ...data) {
+    if (data.length > 0) {
+      this.logNative(`[SS-LOG] ${str}`, data);
+    } else {
+      this.logNative(`[SS-LOG] ${str}`);
+    }
   }
-  logDebug(str) {
-    if (this.o_debug) this.logNative(`[SS-DEBUG] ${str}`);
+  logDebug(str, ...data) {
+    if (this.o_debug) {
+      if (data.length > 0) {
+        this.logNative(`[SS-DEBUG] ${str}`, data);
+      } else {
+        this.logNative(`[SS-DEBUG] ${str}`);
+      }
+    }
   }
   logDebugNaked(str) {
     if (this.o_debug) this.logNative(str);
@@ -203,30 +216,6 @@ class SiteScrubber {
     return new Promise((resolve) => {
       // resolve/return the found element
       resolve(curr);
-    });
-  }
-  // not needed?
-  finalDownloadLinkOpener(query, regex) {
-    if (!query) {
-      return;
-    }
-    this.logDebug(
-      `Trying to find final download link using: [${query}, ${regex}]`
-    );
-    this.waitUntilSelector(query).then((element) => {
-      if (
-        regex instanceof RegExp &&
-        !regex.test(this.document.body.innerText)
-      ) {
-        this.log("DDL Link not found on this page or Regex test failed.");
-      } else {
-        this.log("DDL Link was found on this page.");
-        this.openNative?.(element?.href, "_self");
-        this.logDebug(
-          `finalDownloadLinkOpener() - ${element?.tagName}.href: ${element?.href}`
-        );
-        this.logDebug("Opening DDL link for file.");
-      }
     });
   }
   removeElements(elements) {
@@ -680,7 +669,7 @@ class SiteScrubber {
     }
     this.logDebug("Adding SiteScrubber hover info banner");
 
-    const newNode = `<div class="ss-alert ss-alert-warning ss-mt-5 ss-text-center">TO PREVENT MALICIOUS REDIRECT, <b>HOVER</b> OVER THE BUTTON FOR 2 SECONDS TO SUBMIT CLEANLY</div>`;
+    const newNode = `<div class="ss-alert ss-mt-5">TO PREVENT MALICIOUS REDIRECT, <b>HOVER</b> OVER THE BUTTON FOR 2 SECONDS TO SUBMIT CLEANLY</div>`;
     targetElement.insertAdjacentHTML(where, newNode);
     this.logDebug(
       `addInfoBanner() - elementToAddTo: ${targetElement}, ${where}`
@@ -912,7 +901,7 @@ class SiteScrubber {
         // https://blog.chromium.org/2020/02/protecting-users-from-insecure.html
         this.document.body.insertAdjacentHTML(
           "afterbegin",
-          `<p class='ss-alert ss-alert-warning ss-text-center'>This file should be served over HTTPS. This download has been blocked. See <a href='https://blog.chromium.org/2020/02/protecting-users-from-insecure.html'>https://blog.chromium.org/2020/02/protecting-users-from-insecure.html</a> for more details.</p>`
+          `<p class='ss-alert ss-w-100'>This file should be served over HTTPS. This download has been blocked. See <a href='https://blog.chromium.org/2020/02/protecting-users-from-insecure.html'>https://blog.chromium.org/2020/02/protecting-users-from-insecure.html</a> for more details.</p>`
         );
       }
     }
@@ -1023,6 +1012,17 @@ class SiteScrubber {
     if (disabled !== true) {
       button.disabled = false;
     }
+    this.logDebug("FORM", button.form, button.form?.offsetParent)
+    if (button.form && button.form?.offsetParent === null) {
+      const form = button.form,
+      allowedAttrs = ["action", "method", "target", "id", "style", "class"],
+      attrsToRemove = form.getAttributeNames().filter(x => !allowedAttrs.includes(x));
+      attrsToRemove.forEach((attr) => form.removeAttribute(attr));
+      if (button.form?.offsetParent === null) {
+        this.logDebug("Failed to make form visible", form)
+      }
+    }
+
     return button;
   }
   makeSafeForm({ actionURL, method = "GET", target = "_blank" }) {
@@ -1039,20 +1039,8 @@ class SiteScrubber {
     return form;
   }
   applyRules() {
-    console.time("ss");
     this.log("STARTING CLEANER!");
 
-    if (
-      !this.checkIfDownloadPage(
-        this.currSiteRules?.downloadPageCheckBySelector,
-        this.currSiteRules?.downloadPageCheckByRegex
-      )
-    ) {
-      this.log("Did not match as a download page... Stopping.");
-      return;
-    } else {
-      this.log("Assuming this is a download page.");
-    }
     this.addCustomCSSStyle(this.currSiteRules?.customStyle);
     this.log("Added custom CSS styling");
 
@@ -1085,9 +1073,6 @@ class SiteScrubber {
       this.removeDisabledAttr();
       this.log("Removed 'disabled' attribute from all elements");
     }
-    this.currSiteRules?.finalDownloadElementSelector?.forEach(
-      ([selector, regex]) => this.finalDownloadLinkOpener(selector, regex)
-    );
     this.currSiteRules?.addHoverAbility?.forEach(
       ([elements, requiresCaptcha]) =>
         this.addHoverAbility(elements, requiresCaptcha)
@@ -1393,6 +1378,12 @@ const siteRules = {
       "button[name='method_premium']",
       ".adsBox",
       "#vi-smartbanner",
+      ".fa-flag ~ a",
+      "#xfileshare",
+      "#adsloaded",
+      "form#techyneed",
+      "#load",
+      "#operadata"
     ],
     removeByRegex: [
       { query: ".download_method", regex: /fast download/gi },
@@ -1561,7 +1552,7 @@ const siteRules = {
       [
         "button#dl",
         {
-          customText: "Start Download",
+          customText: "Start DOWNLOAD Now", // uBlock has filter to remove "Download"
           props: { onclick: "", style: "" },
         },
       ],
@@ -1593,7 +1584,7 @@ const siteRules = {
       //   this.$("#admaven_popup")?.setAttribute("value", "1");
       // }
 
-      if (1) {
+      if (this.$("#xd")) {
         const adChecks = `<ins class="adsbygoogle adsbygoogle-noablate" data-adsbygoogle-status="done" style="display: none !important;" data-ad-status="unfilled"><ins id="aswift_0_expand" tabindex="0" title="Advertisement" aria-label="Advertisement" style="border: none; height: 0px; width: 0px; margin: 0px; padding: 0px; position: relative; visibility: visible; background-color: transparent; display: inline-table;"><ins id="aswift_0_anchor" style="border: none; height: 0px; width: 0px; margin: 0px; padding: 0px; position: relative; visibility: visible; background-color: transparent; display: block;"><iframe id="aswift_0" name="aswift_0" style="left:0;position:absolute;top:0;border:0;width:undefinedpx;height:undefinedpx;" sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation" frameborder="0" src="https://googleads.g.doubleclick.net/pagead/ads?client=ca-pub-6572127804953403&amp;output=html&amp;adk=1812271804&amp;adf=3025194257&amp;lmt=1633100775&amp;plat=2%3A16777216%2C3%3A32%2C4%3A32%2C16%3A8388608%2C17%3A32%2C24%3A32%2C25%3A32%2C32%3A32&amp;format=0x0&amp;url=https%3A%2F%2Ffinancemonk.net%2F&amp;ea=0&amp;flash=0&amp;pra=5&amp;wgl=1&amp;uach=WyJBbmRyb2lkIiwiMTAuMC4wIiwiIiwiU00tRzk2MFUxIiwiOTQuMC40NjA2LjU2IixbXSxudWxsLG51bGwsIiJd&amp;dt=1633100774994&amp;bpp=5&amp;bdt=218&amp;idt=26&amp;shv=r20210927&amp;mjsv=m202109240101&amp;ptt=9&amp;saldr=aa&amp;abxe=1&amp;cookie=ID%3D56b750e26beff53c-22055315dbca0007%3AT%3D1633096313%3ART%3D1633096313%3AS%3DALNI_Ma5q7Vv6dbrwy1vOYvLJ2E8WQeRlA&amp;nras=1&amp;correlator=5395437289419&amp;frm=20&amp;pv=2&amp;ga_vid=1679006587.1633100775&amp;ga_sid=1633100775&amp;ga_hid=781536601&amp;ga_fc=0&amp;u_tz=-300&amp;u_his=3&amp;u_h=740&amp;u_w=360&amp;u_ah=740&amp;u_aw=360&amp;u_cd=24&amp;u_java=0&amp;u_nplug=0&amp;u_nmime=0&amp;adx=-12245933&amp;ady=-12245933&amp;biw=360&amp;bih=660&amp;scr_x=0&amp;scr_y=0&amp;eid=31062937%2C31062311&amp;oid=3&amp;pvsid=4344667839301295&amp;pem=875&amp;ref=https%3A%2F%2Fwww.google.com%2F&amp;eae=2&amp;fc=1920&amp;brdim=0%2C0%2C0%2C0%2C360%2C0%2C360%2C660%2C360%2C660&amp;vis=1&amp;rsz=%7C%7Cs%7C&amp;abl=NS&amp;fu=32768&amp;bc=31&amp;ifi=1&amp;uci=a!1&amp;fsb=1&amp;dtd=50" marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" scrolling="no" allowfullscreen="true" data-google-container-id="a!1" data-load-complete="true"></iframe></ins></ins></ins><ins class="adsbygoogle adsbygoogle-noablate" style="display: none !important; width: 100vw !important; height: 100vh !important; inset: 0px auto auto 0px !important; clear: none !important; float: none !important; margin: 0px !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; padding: 0px !important; position: fixed !important; vertical-align: baseline !important; visibility: visible !important; z-index: 2147483647 !important; background: transparent !important;" data-adsbygoogle-status="done" aria-hidden="true" data-ad-status="filled" data-vignette-loaded="true"><ins id="aswift_1_expand" tabindex="0" title="Advertisement" aria-label="Advertisement" style="border: none !important; height: 100vh !important; width: 100vw !important; margin: 0px !important; padding: 0px !important; position: relative !important; visibility: visible !important; background-color: transparent !important; display: inline-table !important; inset: auto !important; clear: none !important; float: none !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; vertical-align: baseline !important; z-index: auto !important;"><ins id="aswift_1_anchor" style="border: none !important; height: 100vh !important; width: 100vw !important; margin: 0px !important; padding: 0px !important; position: relative !important; visibility: visible !important; background-color: transparent !important; display: block !important; inset: auto !important; clear: none !important; float: none !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; vertical-align: baseline !important; z-index: auto !important;"><iframe id="aswift_1" name="" sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation" width="" height="" frameborder="0" src="https://googleads.g.doubleclick.net/pagead/html/r20210927/r20110914/zrt_lookup.html?fsb=1#RS-0-&amp;adk=1812271808&amp;client=ca-pub-6572127804953403&amp;fa=8&amp;ifi=2&amp;uci=a!2" marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" scrolling="no" allowfullscreen="true" style="width: 100vw !important; height: 100vh !important; inset: 0px auto auto 0px !important; position: absolute !important; clear: none !important; display: inline !important; float: none !important; margin: 0px !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; padding: 0px !important; vertical-align: baseline !important; visibility: visible !important; z-index: auto !important;" data-google-container-id="a!2" data-google-query-id="CLj8vrq-qfMCFWxkFQgd5PsNFA" data-load-complete="true"></iframe></ins></ins></ins>[scr=https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202109240101/reactive_library_fy2019.js][scr=https://www.googletagservices.com/activeview/js/current/osd.js][scr=https://partner.googleadservices.com/gampad/cookie.js?domain=financemonk.net&callback=_gfp_s_&client=ca-pub-6572127804953403&cookie=ID%3D56b750e26beff53c-22055315dbca0007%3AT%3D1633096313%3ART%3D1633096313%3AS%3DALNI_Ma5q7Vv6dbrwy1vOYvLJ2E8WQeRlA][scr=https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202109240101/show_ads_impl_fy2019.js][scr=https://static.cloudflareinsights.com/beacon.min.js][scr=https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js][scr=/cdn-cgi/challenge-platform/h/g/scripts/invisible.js][scr=https://adservice.google.com/adsid/integrator.js?domain=financemonk.net][scr=//salutationcheerlessdemote.com/sfp.js][scr=https://adservice.google.com/adsid/integrator.js?domain=financemonk.net][scr=//housewifehaunted.com/4f/b9/d6/4fb9d6755e5818e2fb1ce2f1b6bbd2a5.js][scr=https://tmp.dropgalaxy.in/adspopup.js][scr=https://tmp.dropgalaxy.in/adddds.js?v=1.0]`;
 
         const usr = [...this.$$("body > script")]
@@ -1722,7 +1713,7 @@ const siteRules = {
           // );
           // data capture from a request made from a browser with no Ad-Blockers
           // site then thinks its legit so it works
-          const data2 = `rand=&msg=91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C005004%2C9007%2C100%2C10005%2C11007%2C9007%2C114%2C100%2C005004%2C11007%2C110%2C108%2C111%2C99%2C10007%2C101%2C100%2C005004%2C118%2C101%2C114%2C115%2C105%2C111%2C110%2C9005%2C91%2C114%2C9007%2C110%2C100%2C61%2C9005%2C91%2C105%2C100%2C61%2C10005%2C5004%2C119%2C106%2C116%2C10005%2C10005%2C10041%2C5007%2C10040%2C5005%2C100%2C9005%2C91%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C105%2C115%2C98%2C101%2C115%2C116%2C61%2C48%2C9005%2C91%2C9007%2C100%2C98%2C108%2C111%2C99%2C10007%2C95%2C100%2C101%2C116%2C101%2C99%2C116%2C101%2C100%2C61%2C49%2C9005%2C91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C104%2C9007%2C115%2C104%2C61%2C49%2C9005%2C91%2C100%2C111%2C119%2C110%2C108%2C111%2C9007%2C100%2C104%2C9007%2C115%2C104%2C9007%2C100%2C61%2C11007%2C110%2C100%2C101%2C10004%2C105%2C110%2C101%2C100%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C119%2C119%2C119%2C46%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C116%2C9007%2C98%2C108%2C101%2C116%2C111%2C11004%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C115%2C116%2C9007%2C116%2C105%2C99%2C46%2C99%2C108%2C111%2C11007%2C100%2C10004%2C108%2C9007%2C114%2C101%2C105%2C110%2C115%2C105%2C10005%2C104%2C116%2C115%2C46%2C99%2C111%2C109%2C4007%2C98%2C101%2C9007%2C99%2C111%2C110%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C116%2C9007%2C10005%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C118%2C49%2C4007%2C49%2C54%2C51%2C49%2C5005%2C48%2C5005%2C55%2C56%2C5007%2C4007%2C56%2C5005%2C99%2C55%2C50%2C5005%2C100%2C55%2C5004%2C99%2C50%2C5007%2C54%2C10004%2C10004%2C5007%2C54%2C100%2C48%2C48%2C55%2C10004%2C5004%2C99%2C51%2C56%2C9007%2C9007%2C50%2C54%2C51%2C54%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C114%2C101%2C98%2C105%2C100%2C4007%2C100%2C101%2C10004%2C9007%2C11007%2C108%2C116%2C4007%2C11004%2C114%2C101%2C98%2C105%2C100%2C45%2C118%2C5005%2C46%2C49%2C50%2C46%2C48%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C119%2C119%2C119%2C46%2C10005%2C111%2C111%2C10005%2C108%2C101%2C116%2C9007%2C10005%2C115%2C101%2C114%2C118%2C105%2C99%2C101%2C115%2C46%2C99%2C111%2C109%2C4007%2C116%2C9007%2C10005%2C4007%2C106%2C115%2C4007%2C10005%2C11004%2C116%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C105%2C109%2C9007%2C115%2C100%2C10007%2C46%2C10005%2C111%2C111%2C10005%2C108%2C101%2C9007%2C11004%2C105%2C115%2C46%2C99%2C111%2C109%2C4007%2C106%2C115%2C4007%2C115%2C100%2C10007%2C108%2C111%2C9007%2C100%2C101%2C114%2C4007%2C105%2C109%2C9007%2C51%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C9007%2C115%2C115%2C101%2C116%2C115%2C46%2C118%2C108%2C105%2C116%2C9007%2C10005%2C46%2C99%2C111%2C109%2C4007%2C11004%2C108%2C11007%2C10005%2C105%2C110%2C115%2C4007%2C115%2C9007%2C10004%2C101%2C10004%2C114%2C9007%2C109%2C101%2C4007%2C115%2C114%2C99%2C4007%2C106%2C115%2C4007%2C115%2C10004%2C95%2C104%2C111%2C115%2C116%2C46%2C109%2C105%2C110%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C115%2C101%2C99%2C11007%2C114%2C101%2C11004%2C11007%2C98%2C9007%2C100%2C115%2C46%2C10005%2C46%2C100%2C111%2C11007%2C98%2C108%2C101%2C99%2C108%2C105%2C99%2C10007%2C46%2C110%2C101%2C116%2C4007%2C10005%2C11004%2C116%2C4007%2C11004%2C11007%2C98%2C9007%2C100%2C115%2C95%2C105%2C109%2C11004%2C108%2C95%2C50%2C48%2C50%2C49%2C48%2C5007%2C48%2C55%2C48%2C49%2C46%2C106%2C115%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C100%2C11005%2C48%2C54%2C11007%2C5007%2C108%2C116%2C5005%2C9007%2C10007%2C114%2C50%2C46%2C99%2C108%2C111%2C11007%2C100%2C10004%2C114%2C111%2C110%2C116%2C46%2C110%2C101%2C116%2C4007%2C0076%2C99%2C8007%2C8004%2C108%2C90%2C10007%2C8004%2C0079%2C69%2C65%2C119%2C6007%2C101%2C85%2C104%2C86%2C85%2C86%2C5005%2C51%2C8004%2C119%2C005007%2C51%2C68%2C005007%2C51%2C68%2C9005%2C91%2C115%2C99%2C114%2C61%2C104%2C116%2C116%2C11004%2C115%2C58%2C4007%2C4007%2C99%2C46%2C9007%2C100%2C115%2C99%2C111%2C46%2C114%2C101%2C4007%2C9005%2C91%2C115%2C99%2C114%2C61%2C4007%2C4007%2C98%2C108%2C111%2C99%2C10007%2C9007%2C100%2C115%2C110%2C111%2C116%2C46%2C99%2C111%2C109%2C4007%2C108%2C8005%2C0079%2C46%2C104%2C116%2C109%2C108%2C6005%2C95%2C61%2C66%2C65%2C89%2C65%2C89%2C84%2C54%2C8007%2C84%2C65%2C0070%2C104%2C80%2C115%2C45%2C86%2C10005%2C65%2C0071%2C66%2C65%2C115%2C65%2C65%2C007005%2C0071%2C90%2C104%2C50%2C51%2C10041%2C10040%2C106%2C56%2C10007%2C81%2C10007%2C84%2C48%2C0078%2C85%2C8005%2C84%2C0071%2C007007%2C5004%2C51%2C105%2C66%2C51%2C95%2C0070%2C007004%2C11007%2C95%2C65%2C55%2C99%2C9007%2C11004%2C0071%2C0076%2C5004%2C98%2C99%2C99%2C10007%2C81%2C119%2C81%2C66%2C0071%2C007007%2C69%2C81%2C6007%2C007005%2C65%2C11005%2C118%2C110%2C68%2C98%2C115%2C9007%2C56%2C10004%2C0078%2C104%2C84%2C115%2C0079%2C48%2C51%2C0075%2C116%2C99%2C116%2C111%2C10007%2C10005%2C007005%2C007004%2C0078%2C1004004%2C11004%2C11007%2C54%2C100%2C0070%2C89%2C68%2C007007%2C84%2C0076%2C66%2C9007%2C119%2C99%2C0079%2C65%2C105%2C65%2C10041%2C007007%2C95%2C56%2C5007%2C0070%2C007004%2C51%2C9007%2C10005%2C6007%2C007007%2C0079%2C86%2C101%2C110%2C5005%2C10005%2C114%2C10005%2C9007%2C007004%2C65%2C8007%2C99%2C45%2C0074%2C0074%2C10041%2C0076%2C50%2C10005%2C109%2C6007%2C86%2C1004004%2C114%2C007004%2C104%2C88%2C116%2C66%2C10005%2C0058%2C118%2C61%2C5004%2C0058%2C90%2C110%2C8004%2C10005%2C69%2C84%2C10040%2C007005%2C61%2C51%2C5007%2C48%2C49%2C51%2C49%2C5007%2C0058%2C109%2C105%2C110%2C66%2C105%2C100%2C61%2C48%2C46%2C48%2C48%2C49%2C0058%2C101%2C11004%2C99%2C104%2C8007%2C0078%2C11005%2C0074%2C61%2C48%2C58%2C49%2C44%2C48%2C0058%2C114%2C109%2C0075%2C106%2C110%2C115%2C007004%2C0079%2C61%2C0058%2C66%2C0070%2C0074%2C007004%2C007007%2C115%2C116%2C10007%2C61%2C104%2C116%2C116%2C11004%2C115%2C005007%2C51%2C65%2C005007%2C50%2C0070%2C005007%2C50%2C0070%2C100%2C114%2C111%2C11004%2C10005%2C9007%2C108%2C9007%2C10040%2C10041%2C46%2C99%2C111%2C109%2C005007%2C50%2C0070%2C56%2C50%2C55%2C45%2C119%2C104%2C9007%2C116%2C45%2C105%2C115%2C45%2C105%2C110%2C115%2C11007%2C114%2C9007%2C110%2C99%2C101%2C45%2C99%2C111%2C118%2C101%2C114%2C9007%2C10005%2C101%2C46%2C104%2C116%2C109%2C108%2C0058%2C115%2C61%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C49%2C44%2C49%2C5007%2C50%2C48%2C44%2C49%2C48%2C56%2C48%2C44%2C48%2C9005%2C0`;
+          
           ajaxOptions.data = data;
         }
         return true;
@@ -2093,8 +2084,6 @@ const siteRules = {
     removeIFrames: false,
     removeDisabledAttr: false,
     destroyWindowFunctions: [],
-    finalDownloadElementSelector: [],
-    addHoverAbility: [],
     addInfoBanner: [],
     createCountdown: {},
     modifyButtons: [
@@ -2547,15 +2536,6 @@ const siteRules = {
     hideElements: undefined,
     removeIFrames: true,
     removeDisabledAttr: true,
-    // finalDownloadElementSelector: [],
-    // addHoverAbility: [
-    //   ["form#captchaform a.btn", true],
-    //   ["a.link.act-link.btn-free", false],
-    //   [
-    //     "div.in div.download-ready div.btm div.box-download a.btn.btn-download",
-    //     true,
-    //   ],
-    // ],
     addInfoBanner: [],
     modifyButtons: [
       ["form#captchaform a.btn", { requiresCaptcha: true, makeListener: true }],
@@ -2675,14 +2655,6 @@ const siteRules = {
         "afterbegin",
         `<input type="hidden" name="method_free" value="SLOW SPEED DOWNLOAD">`
       );
-      // this.$("#freebtn")?.click();
-      // if (!window.grecaptcha) {
-      //   this.$("#downloadbtn")?.click();
-      // }
-      // this.$("#dlink")?.click();
-
-      // // add listener
-      // this.addCaptchaListener(document.forms.F1);
     },
   },
   "upload-4ever": {
@@ -3385,7 +3357,6 @@ const siteRules = {
       "e",
       "x",
     ],
-    // finalDownloadElementSelector: [[".div2 a[href^='down']"]],
     addInfoBanner: [
       { targetElement: "form[name='myform']", where: "beforeend" },
       { targetElement: ".div2 a[href^='down']", where: "afterend" },
@@ -4259,8 +4230,6 @@ const siteRules = {
       "_mgPageView659169",
       "_mgPageImp659169",
     ],
-    // finalDownloadElementSelector: [["#direct_link a"]],
-    // addHoverAbility: [["#direct_link a"]],
     addInfoBanner: [{ targetElement: "#direct_link", where: "afterend" }],
     modifyButtons: [
       ["a[rel*='noopener']", { customText: "Free Download" }],
@@ -5412,8 +5381,6 @@ const siteRules = {
       "timer",
       "closure_lm_182125",
     ],
-    finalDownloadElementSelector: [],
-    addHoverAbility: [],
     addInfoBanner: [],
     createCountdown: { element: "div.timer-count" },
     modifyButtons: [
@@ -5525,8 +5492,6 @@ const siteRules = {
       "mAsZVZBrQfEY",
       "RbntPCrNXp",
     ],
-    finalDownloadElementSelector: [],
-    addHoverAbility: [],
     addInfoBanner: [
       { targetElement: "#commonId", where: "beforeend" },
       { targetElement: "span#direct_link", where: "afterend" },
