@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    PrimePlaya24
-// @version      2.0.0b7
+// @version      2.0.0b8
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -465,25 +465,6 @@ class SiteScrubber {
       });
     });
   }
-  modifyGoogleRecaptcha(timer = 0, cb) {
-    const grecaptchaElem = this.$(".g-recaptcha");
-    const site_key = grecaptchaElem?.getAttribute("data-sitekey");
-    grecaptchaElem.innerHTML = `<div id="ss-recaptcha" data-sitekey="${site_key}" data-starttime="${+new Date()}"></div>`;
-    grecaptcha.render("ss-recaptcha", {
-      sitekey: site_key,
-      callback:
-        cb ||
-        function () {
-          const form = siteScrubber.findParentElementByTagName(
-            siteScrubber.$("#ss-recaptcha"),
-            "form"
-          );
-          if (form) {
-            form.submit();
-          }
-        },
-    });
-  }
   removeIFrames() {
     this.log("Removing unwanted scripts from page");
     let i = 0;
@@ -828,16 +809,6 @@ class SiteScrubber {
       interval: 1000,
       customID: "countdown-interval",
     });
-  }
-  tick(element) {
-    const remaining = --this.countdownSecondsLeft;
-    const el = this.getDOMElement(element) || this.document.createElement("i");
-    el.innerText = remaining;
-    if (remaining <= 0) {
-      this.removeInterval("countdown-interval");
-    } else {
-      this.logDebug(`Tick: ${remaining}`);
-    }
   }
   copyAttributesFromElement(sourceElement, targetElement) {
     if (
