@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    PrimePlaya24
-// @version      2.0.0b8
+// @version      2.0.0b9
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -94,6 +94,7 @@ class SiteScrubber {
     this._intervals = {};
     this._listeners = [];
     this._timeouts = {};
+    this._removeElementWatcherList = [];
 
     this.currSiteRules = rules;
     this.ssCSSStyles = `.ss-alert{color:#8a6d3b;background-color:#fcf8e3;border-color:#faebcc;width:100%;padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:4px;text-align:center}.ss-mt-5{margin-top:5em}.ss-btn{display:inline-block;padding:24px 32px;font-family:"Lucida Sans","Lucida Sans Regular","Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;border:unset;color:#dfdfdf;text-transform:uppercase;font-size:24px;letter-spacing:.15em;transition:width .1s linear;position:relative;overflow:hidden;z-index:1;cursor:pointer}.ss-btn:active{transform:scale(.975)}.ss-btn:focus{outline:0}.ss-w-100{width:100%}.ss-btn-ready:after{content:"";position:absolute;bottom:0;left:0;width:100%;height:100%;transition:width .1s linear;z-index:-2}.ss-btn-ready:before{content:"";position:absolute;bottom:0;left:0;width:0%;height:100%;background-color:#11a800;transition:width .1s linear;transition:opacity .1s linear;z-index:-1}.ss-btn-ready:hover:before{width:100%;transition:width 2s linear}.ss-animated-button:active{transform:scale(.975)}.ss-animated-button:focus{outline:0}.ss-animated-button{background:linear-gradient(-30deg,#530000 50%,#340000 50%);padding:20px 40px;margin:12px;display:inline-block;-webkit-transform:translate(0,0);transform:translate(0,0);overflow:hidden;color:#f7d4d4;font-size:20px;letter-spacing:2.5px;text-align:center;text-transform:uppercase;text-decoration:none;-webkit-box-shadow:0 20px 50px rgba(0,0,0,.5);box-shadow:0 20px 50px rgba(0,0,0,.5);font-family:"Lucida Sans","Lucida Sans Regular","Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;border:unset;transition:width .1s linear;position:relative;z-index:1;cursor:pointer}.ss-animated-button.ss-btn-ready{background:linear-gradient(-30deg,#0e5300 50%,#093400 50%);color:#d5f7d4}.ss-animated-button:not(.ss-btn-ready)::before{content:"Not Ready";position:absolute;top:0;left:0;width:100%;font-size:16px;height:100%;opacity:0;-webkit-transition:.2s opacity ease-in-out;transition:.2s opacity ease-in-out}.ss-animated-button:hover::before{opacity:.2}.ss-animated-button span{position:absolute}.ss-animated-button span:nth-child(1){top:0;left:0;width:100%;height:2px;-webkit-animation:2s animateTop linear infinite;animation:2s animateTop linear infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(1){background:-webkit-gradient(linear,right top,left top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to left,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(1){background:-webkit-gradient(linear,right top,left top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to left,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(2){top:0;right:0;height:100%;width:2px;-webkit-animation:2s animateRight linear -1s infinite;animation:2s animateRight linear -1s infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(2){background:-webkit-gradient(linear,left bottom,left top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to top,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(2){background:-webkit-gradient(linear,left bottom,left top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to top,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(3){bottom:0;left:0;width:100%;height:2px;-webkit-animation:2s animateBottom linear infinite;animation:2s animateBottom linear infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(3){background:-webkit-gradient(linear,left top,right top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to right,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(3){background:-webkit-gradient(linear,left top,right top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to right,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(4){top:0;left:0;height:100%;width:2px;-webkit-animation:2s animateLeft linear -1s infinite;animation:2s animateLeft linear -1s infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(4){background:-webkit-gradient(linear,left top,left bottom,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to bottom,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(4){background:-webkit-gradient(linear,left top,left bottom,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to bottom,rgba(14,43,8,0),#01ce0b)}@keyframes animateBottom{0%{-webkit-transform:translateX(-100%);transform:translateX(-100%)}100%{-webkit-transform:translateX(100%);transform:translateX(100%)}}@keyframes animateLeft{0%{-webkit-transform:translateY(-100%);transform:translateY(-100%)}100%{-webkit-transform:translateY(100%);transform:translateY(100%)}}@keyframes animateTop{0%{-webkit-transform:translateX(100%);transform:translateX(100%)}100%{-webkit-transform:translateX(-100%);transform:translateX(-100%)}}@keyframes animateRight{0%{-webkit-transform:translateY(100%);transform:translateY(100%)}100%{-webkit-transform:translateY(-100%);transform:translateY(-100%)}}`;
@@ -216,6 +217,7 @@ class SiteScrubber {
     if (!elements) {
       return;
     }
+    this._removeElementWatcherList = elements;
     this.logDebug("Running removeElements");
     if (typeof elements == "string" || elements instanceof String) {
       // add it to an array so we can use Array functions
@@ -372,69 +374,6 @@ class SiteScrubber {
     this._listeners = this._listeners.filter((x) => x != removeObj);
     return el.removeEventListener(event, listener);
   }
-  // not needed?
-  async addCaptchaListener(formElement, timer = 0) {
-    const form = this.getDOMElement(formElement);
-    if (form === null) {
-      this.log("No Google Captcha found...");
-      this.logDebug("addCaptchaListener() - failed to find element");
-      return;
-    } else {
-      this.log("Form selected!");
-    }
-
-    // const buttonStatusInterval = this.addInterval({
-    //   fn: () => {
-    //     if (this.window.grecaptcha?.getResponse?.()) {
-    //       this._buttons.forEach((button) => {
-    //         button.classList.add("ss-ready");
-    //         // button.classList.remove("ss-incomplete");
-    //       });
-    //     } else {
-    //       this._buttons.forEach((button) => {
-    //         // button.classList.add("ss-incomplete");
-    //         button.classList.remove("ss-ready");
-    //       });
-    //     }
-    //   },
-    //   interval: 100,
-    //   customID: "ss-button-checker",
-    // });
-
-    return new Promise((res, rej) => {
-      // save current date
-      const then = new Date();
-      let counter = 0;
-      const INTERVAL = 250;
-      // interval to check every 250 milliseconds if ReCAPTCHA
-      // has been completed, then the form gets submitted
-      const checker = this.addInterval({
-        fn: () => {
-          if (
-            (window.grecaptcha?.getResponse?.() ||
-              window.hcaptcha?.getResponse?.()) &&
-            Math.floor((new Date() - then) / 1000) > timer
-          ) {
-            // stop interval from continuing
-            // clearInterval(checker);
-            this.removeInterval("RecaptchaListenerInterval");
-            formElement.submit();
-            res();
-          } else {
-            counter++;
-          }
-          if (counter >= 7200) {
-            // stop interval and give up checking
-            // clearInterval(checker);
-            this.removeInterval("RecaptchaListenerInterval");
-            res();
-          }
-        },
-        interval: INTERVAL,
-        customID: "RecaptchaListenerInterval",
-      });
-    });
-  }
   addGoogleRecaptchaJS() {
     const script = this.document.createElement("script");
     script.src = "https://www.google.com/recaptcha/api.js";
@@ -522,6 +461,12 @@ class SiteScrubber {
   }
   isEmptyObject(obj) {
     return JSON.stringify(obj) === "{}";
+  }
+  isEmptyArray(arr) {
+    return JSON.stringify(arr) === "[]";
+  }
+  isNothing(x) {
+    return x === "" || this.isEmptyArray(x) || this.isEmptyObject(x);
   }
   getDOMElement(request) {
     if (this.isElement(request)) {
@@ -969,22 +914,39 @@ class SiteScrubber {
 
     this.log("STARTING CLEANER!");
 
-    this.console.groupCollapsed("ss-addCustomCSSStyle");
-    this.addCustomCSSStyle(this.currSiteRules?.customStyle);
-    this.log("Added custom CSS styling");
-    this.console.groupEnd("ss-addCustomCSSStyle");
+    const observer = new MutationObserver((mutationsList, observer) => {
+      for (const mutation of mutationsList) {
+        const list = [mutation.target, ...mutation.addedNodes];
+        for (const node of list) {
+          for (const removeRule of this._removeElementWatcherList) { // not a fan of this TBH
+            if (node?.matches?.(removeRule)) {
+              this.logDebug("MutationObserver - Removing:", node)
+              node?.remove?.();
+            }
+          }
+        }
+      }
+    });
+    observer.observe(this.document.documentElement, { attributes: true, childList: true, subtree: true });
 
-    if (this.currSiteRules?.createCountdown) {
-      this.console.groupCollapsed("ss-createCountdown");
-      this.createCountdown(this.currSiteRules?.createCountdown);
-      this.log(`Created countdown`);
-      this.logDebugNaked(this.currSiteRules?.createCountdown);
-      this.console.groupEnd("ss-createCountdown");
-    }
-    
-    this.console.groupCollapsed("ss-removeElements");
-    this.removeElements(this.currSiteRules?.remove);
-    this.console.groupEnd("ss-removeElements");
+    const funcsAndParams = {
+      addCustomCSSStyle: "customStyle",
+      createCountdown: "createCountdown",
+      removeElements: "remove",
+      removeIFrames: "removeIFrames",
+      removeDisabledAttr: "removeDisabledAttr",
+    };
+
+    Object.entries(funcsAndParams).forEach(([funcName, param]) => {
+      const rule = this.currSiteRules[param];
+      if (this.isNothing(rule)) {
+        return;
+      } else {
+        this.console.groupCollapsed(`ss-${funcName}`);
+        this[funcName](rule);
+        this.console.groupEnd(`ss-${funcName}`);
+      }
+    });
 
     this.console.groupCollapsed("ss-removeByRegex");
     this.currSiteRules?.removeByRegex?.forEach((removeByRegexOptions) =>
@@ -993,27 +955,6 @@ class SiteScrubber {
     this.log("Removed elements");
     this.console.groupEnd("ss-removeByRegex");
 
-    this.console.groupCollapsed("ss-removeIFrames");
-    if (this.currSiteRules?.removeIFrames) {
-      this.removeIFrames();
-      this.log("Removed iFrames");
-    }
-    this.console.groupEnd("ss-removeIFrames");
-
-    this.console.groupCollapsed("ss-removeDisabledAttr");
-    if (this.currSiteRules?.removeDisabledAttr) {
-      this.removeDisabledAttr();
-      this.log("Removed 'disabled' attribute from all elements");
-    }
-    this.console.groupEnd("ss-removeDisabledAttr");
-
-    this.console.groupCollapsed("ss-addHoverAbility");
-    this.currSiteRules?.addHoverAbility?.forEach(
-      ([elements, requiresCaptcha]) =>
-        this.addHoverAbility(elements, requiresCaptcha)
-    );
-    this.console.groupEnd("ss-addHoverAbility");
-    
     this.console.groupCollapsed("ss-addInfoBanner");
     this.currSiteRules?.addInfoBanner?.forEach((addInfoBannerOptions) =>
       this.addInfoBanner(addInfoBannerOptions)
@@ -1323,6 +1264,11 @@ const siteRules = {
       "form#techyneed",
       "#load",
       "#operadata",
+      "#google_esf",
+      "#badip",
+      ".adsbygoogle",
+      ".google-auto-placed",
+      "body > div[id][style]"
     ],
     removeByRegex: [
       { query: ".download_method", regex: /fast download/gi },
@@ -2485,9 +2431,6 @@ const siteRules = {
       ["a.link.act-link.btn-free"],
     ],
     customScript() {
-      // add listener
-      this.addCaptchaListener(document.forms.captchaform);
-
       this.ifElementExists("form#captchaform", () => {
         this.addInfoBanner({
           targetElement: this.$("form#captchaform")?.parentElement,
@@ -2714,31 +2657,7 @@ const siteRules = {
       ],
     ],
     createCountdown: { element: ".seconds" },
-    customScript() {
-      // this.ifElementExists("#downloadbtn", () => {
-      //   this.$("#downloadbtn").classList.replace("btn-sm", "btn-lg");
-      // });
-      // // Automation
-      // this.$("input[name='method_free']")?.click();
-      // this.addCaptchaListener(document.forms.F1, 35);
-      // this.waitUntilSelector("#downLoadLinkButton").then((link) => {
-      //   this.logDebug(link.getAttribute("onclick"));
-      //   // Remove nasty ad redirect
-      //   link.removeAttribute("onclick");
-      //   link.setAttribute("href", link?.dataset.target);
-      //   this.logNative(link?.dataset.target);
-      //   if (link?.dataset.target) {
-      //     this.log("DDL Link was found on this page.");
-      //     // Open DDL for download
-      //     this.openNative(link?.dataset.target, "_self");
-      //     this.log("Opening DDL link for file.");
-      //   }
-      // });
-      // this.waitUntilSelector("#downLoadLinkButton[onclick]").then((btn) => {
-      //   this.log(btn.getAttribute("onclick"));
-      //   btn.removeAttribute("onclick");
-      // });
-    },
+    customScript() {},
   },
   uploadev: {
     host: ["uploadev.org"],
@@ -3319,7 +3238,6 @@ const siteRules = {
           "afterbegin",
           `<input type="hidden" name="sub" value="Continue">`
         );
-        // this.addCaptchaListener(form);
       });
       this.waitUntilSelector(".div1").then(
         (div) => (div.style.display = "none")
@@ -3913,9 +3831,6 @@ const siteRules = {
           },
           false
         );
-        // this.addCaptchaListener(form).then(() => {
-        //   this.$("#downloadBtnClick").textContent = "Loading...";
-        // });
       });
       // this.waitUntilSelector("#downloadBtnClick").then((btn) => {
       //   btn.className = "ss-animated-button";
@@ -5450,7 +5365,6 @@ const siteRules = {
       this.waitUntilSelector("div.col-xs-12.col-sm-12.col-md-4.col-lg-4").then(
         (div) => (div.className = "col-12")
       );
-      console.timeEnd("ss");
     },
   },
   nitro: {
