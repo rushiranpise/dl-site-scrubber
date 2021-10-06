@@ -66,6 +66,9 @@ class SiteScrubber {
     this.window = window;
     this.document = window.document;
     this.logNative = window.console.log;
+    this.console = window.console;
+    this.console.groupCollapsed = window.console.groupCollapsed;
+    this.console.groupEnd = window.console.groupEnd;
     /*
     uBlock Origin replaces window.open with a Proxy,
     might need a work around to allow opening download
@@ -93,24 +96,15 @@ class SiteScrubber {
     this._timeouts = {};
 
     this.currSiteRules = rules;
-    this.ssCSSStyles = `.ss-alert{color:#8a6d3b;background-color:#fcf8e3;border-color:#faebcc;width:100%;padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:4px;text-align:center}.ss-mt-5{margin-top:5em}.ss-btn{display:inline-block;padding:24px 32px;font-family:"Lucida Sans","Lucida Sans Regular","Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;border:unset;color:#dfdfdf;text-transform:uppercase;font-size:24px;letter-spacing:.15em;transition:width .1s linear;position:relative;overflow:hidden;z-index:1;cursor:pointer}.ss-btn:active{transform:scale(.975)}.ss-btn:focus{outline:0}.ss-w-100{width:100%}.ss-btn-ready:after{content:"";position:absolute;bottom:0;left:0;width:100%;height:100%;transition:width .1s linear;z-index:-2}.ss-btn-ready:before{content:"";position:absolute;bottom:0;left:0;width:0%;height:100%;background-color:#11a800;transition:width .1s linear;transition:opacity .1s linear;z-index:-1}.ss-btn-ready:hover:before{width:100%;transition:width 2s linear}.ss-animated-button:active{transform:scale(.975)}.ss-animated-button:focus{outline:0}.ss-animated-button{background:linear-gradient(-30deg,#530000 50%,#340000 50%);padding:20px 40px;margin:12px;display:inline-block;-webkit-transform:translate(0,0);transform:translate(0,0);overflow:hidden;color:#f7d4d4;font-size:20px;letter-spacing:2.5px;text-align:center;text-transform:uppercase;text-decoration:none;-webkit-box-shadow:0 20px 50px rgba(0,0,0,.5);box-shadow:0 20px 50px rgba(0,0,0,.5);font-family:"Lucida Sans","Lucida Sans Regular","Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;border:unset;transition:width .1s linear;position:relative;z-index:1;cursor:pointer}.ss-animated-button.ss-btn-ready{background:linear-gradient(-30deg,#0e5300 50%,#093400 50%);color:#d5f7d4}.ss-animated-button:not(.ss-btn-ready)::before{content:"Not Ready";position:absolute;top:0;left:0;width:100%;font-size:16px;height:100%;opacity:0;-webkit-transition:.2s opacity ease-in-out;transition:.2s opacity ease-in-out}.ss-animated-button:hover::before{opacity:.2}.ss-animated-button span{position:absolute}.ss-animated-button span:nth-child(1){top:0;left:0;width:100%;height:2px;-webkit-animation:2s animateTop linear infinite;animation:2s animateTop linear infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(1){background:-webkit-gradient(linear,right top,left top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to left,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(1){background:-webkit-gradient(linear,right top,left top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to left,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(2){top:0;right:0;height:100%;width:2px;-webkit-animation:2s animateRight linear -1s infinite;animation:2s animateRight linear -1s infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(2){background:-webkit-gradient(linear,left bottom,left top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to top,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(2){background:-webkit-gradient(linear,left bottom,left top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to top,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(3){bottom:0;left:0;width:100%;height:2px;-webkit-animation:2s animateBottom linear infinite;animation:2s animateBottom linear infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(3){background:-webkit-gradient(linear,left top,right top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to right,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(3){background:-webkit-gradient(linear,left top,right top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to right,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(4){top:0;left:0;height:100%;width:2px;-webkit-animation:2s animateLeft linear -1s infinite;animation:2s animateLeft linear -1s infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(4){background:-webkit-gradient(linear,left top,left bottom,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to bottom,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(4){background:-webkit-gradient(linear,left top,left bottom,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to bottom,rgba(14,43,8,0),#01ce0b)}@keyframes animateBottom{0%{-webkit-transform:translateX(-100%);transform:translateX(-100%)}100%{-webkit-transform:translateX(100%);transform:translateX(100%)}}@keyframes animateLeft{0%{-webkit-transform:translateY(-100%);transform:translateY(-100%)}100%{-webkit-transform:translateY(100%);transform:translateY(100%)}}@keyframes animateTop{0%{-webkit-transform:translateX(100%);transform:translateX(100%)}100%{-webkit-transform:translateX(-100%);transform:translateX(-100%)}}@keyframes animateRight{0%{-webkit-transform:translateY(100%);transform:translateY(100%)}100%{-webkit-transform:translateY(-100%);transform:translateY(-100%)}}`
+    this.ssCSSStyles = `.ss-alert{color:#8a6d3b;background-color:#fcf8e3;border-color:#faebcc;width:100%;padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:4px;text-align:center}.ss-mt-5{margin-top:5em}.ss-btn{display:inline-block;padding:24px 32px;font-family:"Lucida Sans","Lucida Sans Regular","Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;border:unset;color:#dfdfdf;text-transform:uppercase;font-size:24px;letter-spacing:.15em;transition:width .1s linear;position:relative;overflow:hidden;z-index:1;cursor:pointer}.ss-btn:active{transform:scale(.975)}.ss-btn:focus{outline:0}.ss-w-100{width:100%}.ss-btn-ready:after{content:"";position:absolute;bottom:0;left:0;width:100%;height:100%;transition:width .1s linear;z-index:-2}.ss-btn-ready:before{content:"";position:absolute;bottom:0;left:0;width:0%;height:100%;background-color:#11a800;transition:width .1s linear;transition:opacity .1s linear;z-index:-1}.ss-btn-ready:hover:before{width:100%;transition:width 2s linear}.ss-animated-button:active{transform:scale(.975)}.ss-animated-button:focus{outline:0}.ss-animated-button{background:linear-gradient(-30deg,#530000 50%,#340000 50%);padding:20px 40px;margin:12px;display:inline-block;-webkit-transform:translate(0,0);transform:translate(0,0);overflow:hidden;color:#f7d4d4;font-size:20px;letter-spacing:2.5px;text-align:center;text-transform:uppercase;text-decoration:none;-webkit-box-shadow:0 20px 50px rgba(0,0,0,.5);box-shadow:0 20px 50px rgba(0,0,0,.5);font-family:"Lucida Sans","Lucida Sans Regular","Lucida Grande","Lucida Sans Unicode",Geneva,Verdana,sans-serif;border:unset;transition:width .1s linear;position:relative;z-index:1;cursor:pointer}.ss-animated-button.ss-btn-ready{background:linear-gradient(-30deg,#0e5300 50%,#093400 50%);color:#d5f7d4}.ss-animated-button:not(.ss-btn-ready)::before{content:"Not Ready";position:absolute;top:0;left:0;width:100%;font-size:16px;height:100%;opacity:0;-webkit-transition:.2s opacity ease-in-out;transition:.2s opacity ease-in-out}.ss-animated-button:hover::before{opacity:.2}.ss-animated-button span{position:absolute}.ss-animated-button span:nth-child(1){top:0;left:0;width:100%;height:2px;-webkit-animation:2s animateTop linear infinite;animation:2s animateTop linear infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(1){background:-webkit-gradient(linear,right top,left top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to left,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(1){background:-webkit-gradient(linear,right top,left top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to left,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(2){top:0;right:0;height:100%;width:2px;-webkit-animation:2s animateRight linear -1s infinite;animation:2s animateRight linear -1s infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(2){background:-webkit-gradient(linear,left bottom,left top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to top,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(2){background:-webkit-gradient(linear,left bottom,left top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to top,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(3){bottom:0;left:0;width:100%;height:2px;-webkit-animation:2s animateBottom linear infinite;animation:2s animateBottom linear infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(3){background:-webkit-gradient(linear,left top,right top,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to right,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(3){background:-webkit-gradient(linear,left top,right top,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to right,rgba(14,43,8,0),#01ce0b)}.ss-animated-button span:nth-child(4){top:0;left:0;height:100%;width:2px;-webkit-animation:2s animateLeft linear -1s infinite;animation:2s animateLeft linear -1s infinite}.ss-animated-button:not(.ss-btn-ready) span:nth-child(4){background:-webkit-gradient(linear,left top,left bottom,from(rgba(43,8,8,0)),to(#d92626));background:linear-gradient(to bottom,rgba(43,8,8,0),#d92626)}.ss-animated-button.ss-btn-ready span:nth-child(4){background:-webkit-gradient(linear,left top,left bottom,from(rgba(14,43,8,0)),to(#01ce0b));background:linear-gradient(to bottom,rgba(14,43,8,0),#01ce0b)}@keyframes animateBottom{0%{-webkit-transform:translateX(-100%);transform:translateX(-100%)}100%{-webkit-transform:translateX(100%);transform:translateX(100%)}}@keyframes animateLeft{0%{-webkit-transform:translateY(-100%);transform:translateY(-100%)}100%{-webkit-transform:translateY(100%);transform:translateY(100%)}}@keyframes animateTop{0%{-webkit-transform:translateX(100%);transform:translateX(100%)}100%{-webkit-transform:translateX(-100%);transform:translateX(-100%)}}@keyframes animateRight{0%{-webkit-transform:translateY(100%);transform:translateY(100%)}100%{-webkit-transform:translateY(-100%);transform:translateY(-100%)}}`;
   }
   setup() {
     this.logDebug("Initializing SiteScrubber...");
 
-    if (
-      !this.checkIfDownloadPage(
-        this.currSiteRules?.downloadPageCheckBySelector,
-        this.currSiteRules?.downloadPageCheckByRegex
-      )
-    ) {
-      this.log("Did not match as a download page... Stopping.");
-      return;
-    } else {
-      this.log("Assuming this is a download page.");
-      this.destroyWindowFunctions(this.currSiteRules?.destroyWindowFunctions);
-      this.addCustomCSSStyle(this.ssCSSStyles);
-    }
+    this.console.groupCollapsed("ss-destroyWindowFunctions");
+    this.destroyWindowFunctions(this.currSiteRules?.destroyWindowFunctions);
+    this.console.groupEnd("ss-destroyWindowFunctions");
+    this.addCustomCSSStyle(this.ssCSSStyles);
     // Wait till page is ready for the rest
     if (this.ssButtonWatchDog === true) {
       // Ready, so click/submit
@@ -482,40 +476,6 @@ class SiteScrubber {
       e.removeAttribute("disabled");
     });
   }
-  hideElementsByDisplay(elements = []) {
-    if (elements.length === 0) {
-      return;
-    }
-    this.log("Running hideElementsByDisplay");
-    if (this.isQueryString(elements)) {
-      elements = [elements];
-    }
-    [...elements].forEach((e) => {
-      if (this.isQueryString(e)) {
-        this.$$(e).forEach((ele) => (ele.style.display = "none"));
-      } else if (this.isElement(e)) {
-        e.style.display = "none";
-      }
-    });
-    this.logDebug(`Elements hidden: ${elements}`);
-  }
-  hideElementsByVisibility(elements = []) {
-    if (elements.length === 0) {
-      return;
-    }
-    this.log("Running hideElementsByVisibility");
-    if (this.isQueryString(elements)) {
-      elements = [elements];
-    }
-    [...elements].forEach((e) => {
-      if (this.isQueryString(e)) {
-        this.$$(e).forEach((ele) => (ele.style.visibility = "hidden"));
-      } else if (this.isElement(e)) {
-        e.style.visibility = "hidden";
-      }
-    });
-    this.logDebug(`Elements hidden: ${elements}`);
-  }
   async sleep(ms) {
     const _this = this;
     return new Promise((resolve) => _this.origSetTimeout(resolve, ms));
@@ -539,7 +499,7 @@ class SiteScrubber {
         )) ||
       (arrayOfRegexTests instanceof Array &&
         arrayOfRegexTests.some((regex) =>
-          regex?.test(this.document.body.innerText)
+          regex?.test(this.document.documentElement.innerHTML)
         ))
     ) {
       this.logDebug("Found something! Assuming this is a download page!");
@@ -682,14 +642,14 @@ class SiteScrubber {
       try {
         this.window.Object.defineProperty(this.window, option, {
           configurable: false,
-          set(value) {
+          set() {
             return function () {};
           },
           get() {
             return function () {};
           },
         });
-        // this.logDebug(`Destoyed window function: 'window.${option}'`);
+        this.logDebug(`Destoyed window function: 'window.${option}'`);
       } catch (e) {
         this.logDebug(`FAILED to destroy window function: 'window.${option}'`);
         this.logDebug(e);
@@ -829,13 +789,11 @@ class SiteScrubber {
   modifyButton(
     button,
     {
-      disabled = false,
       replaceWithForm = false,
       replaceWithTag,
       copyAttributesFromElement,
       customText,
       className,
-      href,
       props,
       styles,
       attributes,
@@ -980,19 +938,6 @@ class SiteScrubber {
         target.insertAdjacentElement(pos, button);
       }
     }
-    if (disabled !== true) {
-      button.disabled = false;
-    }
-    this.logDebug("FORM", button.form, button.form?.offsetParent)
-    if (button.form && button.form?.offsetParent === null) {
-      const form = button.form,
-      allowedAttrs = ["action", "method", "target", "id", "style", "class"],
-      attrsToRemove = form.getAttributeNames().filter(x => !allowedAttrs.includes(x));
-      attrsToRemove.forEach((attr) => form.removeAttribute(attr));
-      if (button.form?.offsetParent === null) {
-        this.logDebug("Failed to make form visible", form)
-      }
-    }
 
     return button;
   }
@@ -1010,55 +955,79 @@ class SiteScrubber {
     return form;
   }
   applyRules() {
+    if (
+      !this.checkIfDownloadPage(
+        this.currSiteRules?.downloadPageCheckBySelector,
+        this.currSiteRules?.downloadPageCheckByRegex
+      )
+    ) {
+      this.log("Did not match as a download page... Stopping.");
+      return;
+    } else {
+      this.log("Assuming this is a download page.");
+    }
+
     this.log("STARTING CLEANER!");
 
+    this.console.groupCollapsed("ss-addCustomCSSStyle");
     this.addCustomCSSStyle(this.currSiteRules?.customStyle);
     this.log("Added custom CSS styling");
+    this.console.groupEnd("ss-addCustomCSSStyle");
 
     if (this.currSiteRules?.createCountdown) {
+      this.console.groupCollapsed("ss-createCountdown");
       this.createCountdown(this.currSiteRules?.createCountdown);
       this.log(`Created countdown`);
       this.logDebugNaked(this.currSiteRules?.createCountdown);
+      this.console.groupEnd("ss-createCountdown");
     }
+    
+    this.console.groupCollapsed("ss-removeElements");
     this.removeElements(this.currSiteRules?.remove);
-    // this.plug("Removed Elements");
-    // this.currSiteRules?.removeByRegex?.forEach(([selector, regex]) =>
-    //   this.removeElementsByRegex(selector, regex)
-    // );
+    this.console.groupEnd("ss-removeElements");
+
+    this.console.groupCollapsed("ss-removeByRegex");
     this.currSiteRules?.removeByRegex?.forEach((removeByRegexOptions) =>
       this.removeElementsByRegex(removeByRegexOptions)
     );
     this.log("Removed elements");
-    // this.plug("Removed Elements By Regex");
+    this.console.groupEnd("ss-removeByRegex");
 
-    //////////////
-    this.hideElementsByDisplay(this.currSiteRules?.hideElementsByDisplay);
-    // this.log("Hid elements");
-    //////////////
-
+    this.console.groupCollapsed("ss-removeIFrames");
     if (this.currSiteRules?.removeIFrames) {
       this.removeIFrames();
       this.log("Removed iFrames");
     }
+    this.console.groupEnd("ss-removeIFrames");
+
+    this.console.groupCollapsed("ss-removeDisabledAttr");
     if (this.currSiteRules?.removeDisabledAttr) {
       this.removeDisabledAttr();
       this.log("Removed 'disabled' attribute from all elements");
     }
+    this.console.groupEnd("ss-removeDisabledAttr");
+
+    this.console.groupCollapsed("ss-addHoverAbility");
     this.currSiteRules?.addHoverAbility?.forEach(
       ([elements, requiresCaptcha]) =>
         this.addHoverAbility(elements, requiresCaptcha)
     );
-    // this.currSiteRules?.addInfoBanner?.forEach(([element, where]) =>
-    //   this.addInfoBanner(element, where)
-    // );
+    this.console.groupEnd("ss-addHoverAbility");
+    
+    this.console.groupCollapsed("ss-addInfoBanner");
     this.currSiteRules?.addInfoBanner?.forEach((addInfoBannerOptions) =>
       this.addInfoBanner(addInfoBannerOptions)
     );
+    this.console.groupEnd("ss-addInfoBanner");
+
+    this.console.groupCollapsed("ss-modifyButtons");
     if (this.currSiteRules?.modifyButtons) {
       this.currSiteRules?.modifyButtons?.forEach(([button, options]) => {
         this.modifyButton(button, options);
       });
     }
+    this.console.groupEnd("ss-modifyButtons");
+
     this.log("Running site's custom made script");
     this.currSiteRules?.customScript?.bind(this)?.();
   }
@@ -1200,7 +1169,7 @@ const siteRules = {
   },
   mixloads: {
     host: ["mixloads.com"],
-    customStyle: `html,body,#container,div.download_method{background:#121212!important;color:#dfdfdf!important}.download_box{background-color:#323232!important}.bg-white{background:#121212!important}`,
+    customStyle: `html,body,#container,div.download_method,.bg-white{background:#121212!important;color:#dfdfdf!important}.download_box{background-color:#323232!important}table{display:none!important}`,
     downloadPageCheckBySelector: [
       "button#method_free",
       "button#downloadbtn",
@@ -1223,7 +1192,6 @@ const siteRules = {
       "ul.features",
     ],
     removeByRegex: [{ query: ".download_method", regex: /fast download/gi }],
-    hideElementsByDisplay: ["table"],
     removeIFrames: true,
     removeDisabledAttr: true,
     destroyWindowFunctions: [
@@ -1354,7 +1322,7 @@ const siteRules = {
       "#adsloaded",
       "form#techyneed",
       "#load",
-      "#operadata"
+      "#operadata",
     ],
     removeByRegex: [
       { query: ".download_method", regex: /fast download/gi },
@@ -1684,7 +1652,7 @@ const siteRules = {
           // );
           // data capture from a request made from a browser with no Ad-Blockers
           // site then thinks its legit so it works
-          
+
           ajaxOptions.data = data;
         }
         return true;
