@@ -27,7 +27,7 @@ The most popular userscript managers are Greasemonkey, Tampermonkey, and Violent
 2. Install SiteScrubber from a source
 	- [SiteScrubber on GitHub](https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/dist/SiteScrubber.user.js)
 	- [SiteScrubber on GreasyFork](https://greasyfork.org/en/scripts/426078-sitescrubber)
-	- [SiteScrubber on OpenUserJS](#)
+	- [SiteScrubber on OpenUserJS](https://openuserjs.org/scripts/PrimePlaya24/SiteScrubber)
 3. PROFIT!!!!
 
 ** *Suggest you also install [uBlock Origin](https://github.com/gorhill/uBlock) as many of the supported sites are COVERED in Ads!* **
