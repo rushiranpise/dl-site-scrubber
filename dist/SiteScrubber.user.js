@@ -466,7 +466,7 @@ class SiteScrubber {
     return JSON.stringify(arr) === "[]";
   }
   isNothing(x) {
-    return x === "" || this.isEmptyArray(x) || this.isEmptyObject(x);
+    return void 0 === x || null === x || x === "" || this.isEmptyArray(x) || this.isEmptyObject(x);
   }
   getDOMElement(request) {
     if (this.isElement(request)) {
