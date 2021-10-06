@@ -13,6 +13,14 @@ All major and minor version changes will be documented in this file. Details of 
 
 ## Details
 
-### [2.0.0] - 2021-09-21
+### [2.0.1] - 2021-10-05
 - Complete rewrite!
-- 
+- Uses ES6 Class
+- Update all supported sites to conform to need methods
+- Made custom CSS style for button to make it easier to find
+    - **Red** when page is not ready
+    - **Green** when page is ready
+- New method to destroy global variables that were used by the page to hinder user experience
+    - Writes the global variables so they cannot be overwritten/assigned again
+        - Essentially breaks when the malicious functions try to call the global variable
+- and more!
