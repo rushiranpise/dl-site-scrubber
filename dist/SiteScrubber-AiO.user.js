@@ -8,8 +8,8 @@
 // @icon         https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/assets/icons/SiteScrubber-aio_icon.png
 // @homepageURL  https://github.com/PrimePlaya24/dl-site-scrubber
 // @supportURL   https://github.com/PrimePlaya24/dl-site-scrubber/issues
-// @updateURL    https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/dist/SiteScrubber-AiO.meta.js
-// @downloadURL  https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/dist/SiteScrubber-AiO.user.js
+// @updateURL    https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/dist/SiteScrubber.meta.js
+// @downloadURL  https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/dist/SiteScrubber.user.js
 // @compatible   firefox Violentmonkey
 // @compatible   firefox Tampermonkey
 // @compatible   chrome Violentmonkey
