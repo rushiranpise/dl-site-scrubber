@@ -178,19 +178,32 @@ class SiteScrubber {
     // append our <style> element to the page
     targ.appendChild(newNode);
   }
-  async waitUntilSelector(query) {
-    if (!query) {
-      return;
-    }
-    this.logDebug(`Waiting for selector: ${query}`);
-    while (!this.$(query)) {
-      // if not found, wait and check again in 500 milliseconds
-      await new Promise((r) => this.origSetTimeout(r, 500));
-    }
-    this.logDebug(`Found element by selector: ${query}`);
-    return new Promise((resolve) => {
-      // resolve/return the found element
-      resolve(this.$(query));
+  async waitUntilSelector(selector) {
+    this.logDebug(`Waiting for selector: ${selector}`);
+    return new Promise((resolve, reject) => {
+      const element = this.$(selector);
+      
+      if(element) {
+        this.logDebug(`Found element matching selector: ${selector}`);
+        resolve(element);
+        return;
+      }
+      
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          const nodes = Array.from(mutation.addedNodes);
+          for(const node of nodes) {
+            if(node.matches && node.matches(selector)) {
+              observer.disconnect();
+              this.logDebug(`Observed element matches selector: ${selector}`);
+              resolve(node);
+              return;
+            }
+          };
+        });
+      });
+      
+      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
     });
   }
   async waitUntilGlobalVariable(...variableNames) {
@@ -1242,7 +1255,7 @@ const siteRules = {
       "financemonk.net",
     ],
     customStyle: `html,body,#container,.bg-white{background:#121212!important;color:#dfdfdf!important}.download_box,.fileInfo{background-color:#323232!important}ins,#badip,#vi-smartbanner,.adsBox,vli,div[style*='2147483650'],#modalpop,#overlaypop{display:none!important}body{padding-bottom:unset!important}`, // body > div:not([class])
-    downloadPageCheckBySelector: ["button[name='method_free']", "a#dl"],
+    downloadPageCheckBySelector: ["button[name='method_free']", "a#dl", ".container.pt-5.page.message"],
     downloadPageCheckByRegex: [
       /Click here to download/gi,
       /This direct link will be available for/gi,
@@ -1460,6 +1473,10 @@ const siteRules = {
       this.$$(".col-md-4").forEach((e) =>
         e.classList.replace("col-md-4", "col-12")
       );
+
+      if (this.$(".container.pt-5.page.message")) {
+        window.location.reload();
+      }
 
       // if (this.$("#xd")) {
       //   this.$("#downloadhash")?.setAttribute("value", "0");
@@ -2403,8 +2420,8 @@ const siteRules = {
   rapidgator: {
     host: ["rapidgator.net/file", "rapidgator.net/download/captcha"],
     customStyle: `html{background:#121212!important}body{background:#121212!important;background-color:#121212!important;color:#dfdfdf!important}.container,.overall,.wrap-main-block{background:#121212!important}`,
-    downloadPageCheckBySelector: [],
-    downloadPageCheckByRegex: [],
+    downloadPageCheckBySelector: [".link.act-link.btn-free", "#captchaform"],
+    downloadPageCheckByRegex: [/slow speed download/gi],
     remove: [
       ".header",
       ".footer",
@@ -2416,6 +2433,8 @@ const siteRules = {
       "div.clear",
       ".table-download table tr:nth-child(n+2)",
       ".captcha_info",
+      ".descr",
+      "a.btn-premium"
     ],
     removeByRegex: [],
     hideElements: undefined,
@@ -2436,6 +2455,38 @@ const siteRules = {
           targetElement: this.$("form#captchaform")?.parentElement,
         });
       });
+
+      sid = null;
+      fetch(`https://rapidgator.net/download/AjaxStartTimer?fid=${fid}`, {
+        "headers": {
+          "accept": "application/json, text/javascript, */*; q=0.01",
+          "accept-language": "en-US,en;q=0.9",
+          "sec-fetch-dest": "empty",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-site": "same-origin",
+          "sec-gpc": "1",
+          "x-requested-with": "XMLHttpRequest"
+        },
+        "body": null,
+        "method": "GET",
+        "mode": "cors",
+        "credentials": "include"
+      }).then(res => res.json()).then((data) => {sid = data.sid})
+      fetch(`https://rapidgator.net/download/AjaxGetDownloadLink?sid=${sid}`, {
+        "headers": {
+          "accept": "application/json, text/javascript, */*; q=0.01",
+          "accept-language": "en-US,en;q=0.9",
+          "sec-fetch-dest": "empty",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-site": "same-origin",
+          "sec-gpc": "1",
+          "x-requested-with": "XMLHttpRequest"
+        },
+        "body": null,
+        "method": "GET",
+        "mode": "cors",
+        "credentials": "include"
+      }).then(res => res.json()).then((data) => console.log(data))
 
       // the ending direct download link
       const ddlURL =
@@ -6095,9 +6146,9 @@ for (const site in siteRules) {
   if (
     currSiteRules.host.some((urlMatch) => {
       if (urlMatch instanceof RegExp) {
-        return Boolean(document.domain.match(urlMatch));
+        return Boolean(window.location.href.match(urlMatch));
       } else {
-        return document.domain.includes(urlMatch);
+        return window.location.href.includes(urlMatch);
       }
     })
   ) {
