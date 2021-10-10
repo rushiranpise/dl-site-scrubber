@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    SiteScrubber
-// @version      2.0.1
+// @version      2.0.2
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -110,7 +110,7 @@ class SiteScrubber {
     if (this.ssButtonWatchDog === true) {
       // Ready, so click/submit
       this.waitUntilSelector(".ss-btn-ready").then((ssBtn) => {
-        this.log("WOULD'VE CLICKED ss-btn", ssBtn);
+        // this.log("WOULD'VE CLICKED ss-btn", ssBtn);
         ssBtn.click();
       });
     }
@@ -182,28 +182,32 @@ class SiteScrubber {
     this.logDebug(`Waiting for selector: ${selector}`);
     return new Promise((resolve, reject) => {
       const element = this.$(selector);
-      
-      if(element) {
+
+      if (element) {
         this.logDebug(`Found element matching selector: ${selector}`);
         resolve(element);
         return;
       }
-      
+
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
-          const nodes = Array.from(mutation.addedNodes);
-          for(const node of nodes) {
-            if(node.matches && node.matches(selector)) {
+          const nodes = [mutation.target, ...mutation.addedNodes];
+          for (const node of nodes) {
+            if (node.matches && node.matches(selector)) {
               observer.disconnect();
               this.logDebug(`Observed element matches selector: ${selector}`);
               resolve(node);
               return;
             }
-          };
+          }
         });
       });
-      
-      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+      });
     });
   }
   async waitUntilGlobalVariable(...variableNames) {
@@ -479,7 +483,13 @@ class SiteScrubber {
     return JSON.stringify(arr) === "[]";
   }
   isNothing(x) {
-    return void 0 === x || null === x || x === "" || this.isEmptyArray(x) || this.isEmptyObject(x);
+    return (
+      void 0 === x ||
+      null === x ||
+      x === "" ||
+      this.isEmptyArray(x) ||
+      this.isEmptyObject(x)
+    );
   }
   getDOMElement(request) {
     if (this.isElement(request)) {
@@ -931,16 +941,21 @@ class SiteScrubber {
       for (const mutation of mutationsList) {
         const list = [mutation.target, ...mutation.addedNodes];
         for (const node of list) {
-          for (const removeRule of this._removeElementWatcherList) { // not a fan of this TBH
+          for (const removeRule of this._removeElementWatcherList) {
+            // not a fan of this TBH
             if (node?.matches?.(removeRule)) {
-              this.logDebug("MutationObserver - Removing:", node)
+              this.logDebug("MutationObserver - Removing:", node);
               node?.remove?.();
             }
           }
         }
       }
     });
-    observer.observe(this.document.documentElement, { attributes: true, childList: true, subtree: true });
+    observer.observe(this.document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
 
     const funcsAndParams = {
       addCustomCSSStyle: "customStyle",
@@ -1255,7 +1270,11 @@ const siteRules = {
       "financemonk.net",
     ],
     customStyle: `html,body,#container,.bg-white{background:#121212!important;color:#dfdfdf!important}.download_box,.fileInfo{background-color:#323232!important}ins,#badip,#vi-smartbanner,.adsBox,vli,div[style*='2147483650'],#modalpop,#overlaypop{display:none!important}body{padding-bottom:unset!important}`, // body > div:not([class])
-    downloadPageCheckBySelector: ["button[name='method_free']", "a#dl", ".container.pt-5.page.message"],
+    downloadPageCheckBySelector: [
+      "button[name='method_free']",
+      "a#dl",
+      ".container.pt-5.page.message",
+    ],
     downloadPageCheckByRegex: [
       /Click here to download/gi,
       /This direct link will be available for/gi,
@@ -1281,7 +1300,7 @@ const siteRules = {
       "#badip",
       ".adsbygoogle",
       ".google-auto-placed",
-      "body > div[id][style]"
+      "body > div[id][style]",
     ],
     removeByRegex: [
       { query: ".download_method", regex: /fast download/gi },
@@ -1350,7 +1369,6 @@ const siteRules = {
       "_0x5e084c",
       "vitag",
       "linksucess",
-      // "go", // Page uses this function to navigate to disguised url
       "delComment",
       "player_start",
       "pplayer",
@@ -1376,7 +1394,6 @@ const siteRules = {
       "tagApi",
       "viAPItag",
       "observeElementInViewport",
-      "jQuery19108284913344818186",
       "colors",
       "setStyleSheet",
       "changecolor",
@@ -1422,6 +1439,46 @@ const siteRules = {
       "timeout",
       "a",
       "refS",
+      "_0x4a8e",
+      "_0x16d8",
+      "_0xc6b3ab",
+      "_0x3cbc13",
+      "_0x112ff3",
+      "_0x105c91",
+      "_0x1b9f42",
+      "_0x25716d",
+      "_mgIntExchangeNews",
+      "AdskeeperInfC1208347",
+      "AdskeeperCContextBlock1208347",
+      "AdskeeperCMainBlock1208347",
+      "AdskeeperCInternalExchangeBlock1208347",
+      "AdskeeperCRejectBlock1208347",
+      "AdskeeperCElasticBlock1208347",
+      "AdskeeperCInternalExchangeLoggerBlock1208347",
+      "AdskeeperCObserverBlock1208347",
+      "AdskeeperCSendDimensionsBlock1208347",
+      "AdskeeperCRtbBlock1208347",
+      "AdskeeperCDiscountBlock1208347",
+      "AdskeeperCIframeSizeChangerBlock1208347",
+      "AdskeeperCContentPreviewBlock1208347",
+      "mg_loaded_672617_1208347",
+      "onClickExcludes",
+      "mgReject1208347",
+      "mgLoadAds1208347_0a39b",
+      "AdskeeperCReject1208347",
+      "AdskeeperLoadGoods1208347_0a39b",
+      "_mgq",
+      "_mgqp",
+      "_mgqt",
+      "_mgqi",
+      "_mgCanonicalUri",
+      "_mgPageViewEndPoint672617",
+      "_mgPvid",
+      "_mgPageView672617",
+      "i.js.loaded",
+      "i-noref.js.loaded",
+      "_mgwcapping",
+      "_mgPageImp672617",
     ],
     addInfoBanner: [
       {
@@ -1474,9 +1531,9 @@ const siteRules = {
         e.classList.replace("col-md-4", "col-12")
       );
 
-      if (this.$(".container.pt-5.page.message")) {
-        window.location.reload();
-      }
+      // if (this.$(".container.pt-5.page.message")) {
+      //   window.location.reload();
+      // }
 
       // if (this.$("#xd")) {
       //   this.$("#downloadhash")?.setAttribute("value", "0");
@@ -1487,7 +1544,8 @@ const siteRules = {
       // }
 
       if (this.$("#xd")) {
-        const adChecks = `<ins class="adsbygoogle adsbygoogle-noablate" data-adsbygoogle-status="done" style="display: none !important;" data-ad-status="unfilled"><ins id="aswift_0_expand" tabindex="0" title="Advertisement" aria-label="Advertisement" style="border: none; height: 0px; width: 0px; margin: 0px; padding: 0px; position: relative; visibility: visible; background-color: transparent; display: inline-table;"><ins id="aswift_0_anchor" style="border: none; height: 0px; width: 0px; margin: 0px; padding: 0px; position: relative; visibility: visible; background-color: transparent; display: block;"><iframe id="aswift_0" name="aswift_0" style="left:0;position:absolute;top:0;border:0;width:undefinedpx;height:undefinedpx;" sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation" frameborder="0" src="https://googleads.g.doubleclick.net/pagead/ads?client=ca-pub-6572127804953403&amp;output=html&amp;adk=1812271804&amp;adf=3025194257&amp;lmt=1633100775&amp;plat=2%3A16777216%2C3%3A32%2C4%3A32%2C16%3A8388608%2C17%3A32%2C24%3A32%2C25%3A32%2C32%3A32&amp;format=0x0&amp;url=https%3A%2F%2Ffinancemonk.net%2F&amp;ea=0&amp;flash=0&amp;pra=5&amp;wgl=1&amp;uach=WyJBbmRyb2lkIiwiMTAuMC4wIiwiIiwiU00tRzk2MFUxIiwiOTQuMC40NjA2LjU2IixbXSxudWxsLG51bGwsIiJd&amp;dt=1633100774994&amp;bpp=5&amp;bdt=218&amp;idt=26&amp;shv=r20210927&amp;mjsv=m202109240101&amp;ptt=9&amp;saldr=aa&amp;abxe=1&amp;cookie=ID%3D56b750e26beff53c-22055315dbca0007%3AT%3D1633096313%3ART%3D1633096313%3AS%3DALNI_Ma5q7Vv6dbrwy1vOYvLJ2E8WQeRlA&amp;nras=1&amp;correlator=5395437289419&amp;frm=20&amp;pv=2&amp;ga_vid=1679006587.1633100775&amp;ga_sid=1633100775&amp;ga_hid=781536601&amp;ga_fc=0&amp;u_tz=-300&amp;u_his=3&amp;u_h=740&amp;u_w=360&amp;u_ah=740&amp;u_aw=360&amp;u_cd=24&amp;u_java=0&amp;u_nplug=0&amp;u_nmime=0&amp;adx=-12245933&amp;ady=-12245933&amp;biw=360&amp;bih=660&amp;scr_x=0&amp;scr_y=0&amp;eid=31062937%2C31062311&amp;oid=3&amp;pvsid=4344667839301295&amp;pem=875&amp;ref=https%3A%2F%2Fwww.google.com%2F&amp;eae=2&amp;fc=1920&amp;brdim=0%2C0%2C0%2C0%2C360%2C0%2C360%2C660%2C360%2C660&amp;vis=1&amp;rsz=%7C%7Cs%7C&amp;abl=NS&amp;fu=32768&amp;bc=31&amp;ifi=1&amp;uci=a!1&amp;fsb=1&amp;dtd=50" marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" scrolling="no" allowfullscreen="true" data-google-container-id="a!1" data-load-complete="true"></iframe></ins></ins></ins><ins class="adsbygoogle adsbygoogle-noablate" style="display: none !important; width: 100vw !important; height: 100vh !important; inset: 0px auto auto 0px !important; clear: none !important; float: none !important; margin: 0px !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; padding: 0px !important; position: fixed !important; vertical-align: baseline !important; visibility: visible !important; z-index: 2147483647 !important; background: transparent !important;" data-adsbygoogle-status="done" aria-hidden="true" data-ad-status="filled" data-vignette-loaded="true"><ins id="aswift_1_expand" tabindex="0" title="Advertisement" aria-label="Advertisement" style="border: none !important; height: 100vh !important; width: 100vw !important; margin: 0px !important; padding: 0px !important; position: relative !important; visibility: visible !important; background-color: transparent !important; display: inline-table !important; inset: auto !important; clear: none !important; float: none !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; vertical-align: baseline !important; z-index: auto !important;"><ins id="aswift_1_anchor" style="border: none !important; height: 100vh !important; width: 100vw !important; margin: 0px !important; padding: 0px !important; position: relative !important; visibility: visible !important; background-color: transparent !important; display: block !important; inset: auto !important; clear: none !important; float: none !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; vertical-align: baseline !important; z-index: auto !important;"><iframe id="aswift_1" name="" sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation" width="" height="" frameborder="0" src="https://googleads.g.doubleclick.net/pagead/html/r20210927/r20110914/zrt_lookup.html?fsb=1#RS-0-&amp;adk=1812271808&amp;client=ca-pub-6572127804953403&amp;fa=8&amp;ifi=2&amp;uci=a!2" marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" scrolling="no" allowfullscreen="true" style="width: 100vw !important; height: 100vh !important; inset: 0px auto auto 0px !important; position: absolute !important; clear: none !important; display: inline !important; float: none !important; margin: 0px !important; max-height: none !important; max-width: none !important; opacity: 1 !important; overflow: visible !important; padding: 0px !important; vertical-align: baseline !important; visibility: visible !important; z-index: auto !important;" data-google-container-id="a!2" data-google-query-id="CLj8vrq-qfMCFWxkFQgd5PsNFA" data-load-complete="true"></iframe></ins></ins></ins>[scr=https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202109240101/reactive_library_fy2019.js][scr=https://www.googletagservices.com/activeview/js/current/osd.js][scr=https://partner.googleadservices.com/gampad/cookie.js?domain=financemonk.net&callback=_gfp_s_&client=ca-pub-6572127804953403&cookie=ID%3D56b750e26beff53c-22055315dbca0007%3AT%3D1633096313%3ART%3D1633096313%3AS%3DALNI_Ma5q7Vv6dbrwy1vOYvLJ2E8WQeRlA][scr=https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202109240101/show_ads_impl_fy2019.js][scr=https://static.cloudflareinsights.com/beacon.min.js][scr=https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js][scr=/cdn-cgi/challenge-platform/h/g/scripts/invisible.js][scr=https://adservice.google.com/adsid/integrator.js?domain=financemonk.net][scr=//salutationcheerlessdemote.com/sfp.js][scr=https://adservice.google.com/adsid/integrator.js?domain=financemonk.net][scr=//housewifehaunted.com/4f/b9/d6/4fb9d6755e5818e2fb1ce2f1b6bbd2a5.js][scr=https://tmp.dropgalaxy.in/adspopup.js][scr=https://tmp.dropgalaxy.in/adddds.js?v=1.0]`;
+
+        d = `[scr=https://partner.googleadservices.com/gampad/cookie.js?domain=financemonk.net&callback=_gfp_s_&client=ca-pub-6572127804953403&cookie=ID%3Df526ab9ddf63cbae-222fa9ff7aca00c8%3AT%3D1632852276%3ART%3D1632852276%3AS%3DALNI_MZQ7GS9Y8sYz_JB8FD0MiQ92KIRJQ][scr=https://pagead2.googlesyndication.com/pagead/managed/js/adsense/m202110040101/show_ads_impl.js][scr=https://static.cloudflareinsights.com/beacon.min.js][scr=https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js][scr=/cdn-cgi/challenge-platform/h/b/scripts/invisible.js][scr=https://adservice.google.com/adsid/integrator.js?domain=financemonk.net][scr=https://adservice.google.com/adsid/integrator.js?domain=financemonk.net][scr=//housewifehaunted.com/4f/b9/d6/4fb9d6755e5818e2fb1ce2f1b6bbd2a5.js][scr=https://tmp.dropgalaxy.in/adspopup.js][scr=https://tmp.dropgalaxy.in/adddds.js?v=1.0][scr=//housewifehaunted.com/55/]`;
 
         const usr = [...this.$$("body > script")]
           .find((e) => e.innerHTML.match(/despacito/))
@@ -1500,9 +1558,9 @@ const siteRules = {
           ?.innerHTML?.match(
             /src="(https:\/\/tmp.dropgalaxy.in\/advertisement\/[^"]+)/
           )?.[1];
-        const customPayload = `[download adguard unlocked version][LODA-LELO][despacito][rrrr][rand=][id=${
-          this.$("#fileid")?.value
-        }][dropgalaxyisbest=0][adblock_detected=1][downloadhash=][downloadhashad=1]${usr}${adChecks}`;
+
+        const fileID = this.$("#fileid")?.value;
+        const customPayload = `[download adguard unlocked version][LODA-LELO][despacito][rrrr][https://dropgalaxy.com/?op=report_file&id=${fileID}}][rand=][id=${fileID}][dropgalaxyisbest=0][adblock_detected=1][downloadhash=][downloadhashad=1]${usr}${d}`;
 
         const iframeAd = document.createElement("iframe");
         iframeAd.src = advertisingCheckLink;
@@ -1573,6 +1631,7 @@ const siteRules = {
           ajaxOptions?.url?.search("https://tmp.dropgalaxy.in/gettoken.php") >
           -1
         ) {
+          return false;
           function overallDecoder(message) {
             const decoded = message
               .replace(/004|005|007/g, (res) => {
@@ -2434,7 +2493,7 @@ const siteRules = {
       ".table-download table tr:nth-child(n+2)",
       ".captcha_info",
       ".descr",
-      "a.btn-premium"
+      "a.btn-premium",
     ],
     removeByRegex: [],
     hideElements: undefined,
@@ -2458,35 +2517,41 @@ const siteRules = {
 
       sid = null;
       fetch(`https://rapidgator.net/download/AjaxStartTimer?fid=${fid}`, {
-        "headers": {
-          "accept": "application/json, text/javascript, */*; q=0.01",
+        headers: {
+          accept: "application/json, text/javascript, */*; q=0.01",
           "accept-language": "en-US,en;q=0.9",
           "sec-fetch-dest": "empty",
           "sec-fetch-mode": "cors",
           "sec-fetch-site": "same-origin",
           "sec-gpc": "1",
-          "x-requested-with": "XMLHttpRequest"
+          "x-requested-with": "XMLHttpRequest",
         },
-        "body": null,
-        "method": "GET",
-        "mode": "cors",
-        "credentials": "include"
-      }).then(res => res.json()).then((data) => {sid = data.sid})
+        body: null,
+        method: "GET",
+        mode: "cors",
+        credentials: "include",
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          sid = data.sid;
+        });
       fetch(`https://rapidgator.net/download/AjaxGetDownloadLink?sid=${sid}`, {
-        "headers": {
-          "accept": "application/json, text/javascript, */*; q=0.01",
+        headers: {
+          accept: "application/json, text/javascript, */*; q=0.01",
           "accept-language": "en-US,en;q=0.9",
           "sec-fetch-dest": "empty",
           "sec-fetch-mode": "cors",
           "sec-fetch-site": "same-origin",
           "sec-gpc": "1",
-          "x-requested-with": "XMLHttpRequest"
+          "x-requested-with": "XMLHttpRequest",
         },
-        "body": null,
-        "method": "GET",
-        "mode": "cors",
-        "credentials": "include"
-      }).then(res => res.json()).then((data) => console.log(data))
+        body: null,
+        method: "GET",
+        mode: "cors",
+        credentials: "include",
+      })
+        .then((res) => res.json())
+        .then((data) => console.log(data));
 
       // the ending direct download link
       const ddlURL =
