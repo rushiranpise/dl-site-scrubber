@@ -57,7 +57,6 @@ SiteScrubber will:
 - dlupload.com
 - douploads.net
 - drop.download ⭐
-- dropgalaxy.in ⭐
 - fastclick.to
 - file-upload.com
 - file4.net
@@ -88,6 +87,5 @@ SiteScrubber will:
 | BEFORE | AFTER |
 | - | - |
 |![](https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/examples/apkadmin.com-before.jpg) | ![](https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/examples/apkadmin.com-after.jpg) |
-| ![](https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/examples//dropgalaxy.in-before.jpg) | ![](https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/examples/dropgalaxy.in-after.jpg) |
 | ![](https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/examples//mixloads.com-before.jpg) | ![](https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/examples/mixloads.com-after.jpg) |
 | ![](https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/examples//upload-4ever.com-before.jpg) | ![](https://github.com/PrimePlaya24/dl-site-scrubber/raw/master/examples/upload-4ever.com-after.jpg) |

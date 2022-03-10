@@ -13,6 +13,9 @@ All major and minor version changes will be documented in this file. Details of 
 
 ## Details
 
+### [2.1.0] - 2022-03-10
+- Removed support for DropGalaxy
+
 ### [2.0.1] - 2021-10-05
 - Complete rewrite!
 - Uses ES6 Class

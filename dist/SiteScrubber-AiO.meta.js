@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    SiteScrubber
-// @version      2.0.3
+// @version      2.1.0
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -17,7 +17,6 @@
 // @include      /^(?:https?:\/\/)?(?:www\.)?dropapk\.(to|com)\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?drop\.download\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?mixloads\.com//
-// @include      /^(?:https?:\/\/)?(?:www\.)?dropgalaxy\.(in|com)\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?financemonk\.net\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?tech(ssting|yneed)\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?file-up(load)?\.(com|org)\//
