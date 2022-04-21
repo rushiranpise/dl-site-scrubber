@@ -13,6 +13,10 @@ All major and minor version changes will be documented in this file. Details of 
 
 ## Details
 
+### [2.1.1] - 2022-04-21
+- Fixed issue in addCustomCSSStyle() (Issue #13)
+- Updated script for UploadRar
+
 ### [2.1.0] - 2022-03-10
 - Removed support for DropGalaxy
 

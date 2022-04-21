@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    SiteScrubber
-// @version      2.1.0
+// @version      2.1.1
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -100,7 +100,7 @@ class SiteScrubber {
   }
   setup() {
     this.logDebug("Initializing SiteScrubber...");
-
+    
     this.console.groupCollapsed("ss-destroyWindowFunctions");
     this.destroyWindowFunctions(this.currSiteRules?.destroyWindowFunctions);
     this.console.groupEnd("ss-destroyWindowFunctions");
@@ -174,8 +174,13 @@ class SiteScrubber {
     // select where to place our <style> element
     const targ =
       this.document.head || this.document.body || this.document.documentElement;
+    // check if script beat the page loading
+    if (targ === null) {
+      return false;
+    }
     // append our <style> element to the page
-    targ.appendChild(newNode);
+    targ?.appendChild(newNode);
+    return true;
   }
   async waitUntilSelector(selector) {
     this.logDebug(`Waiting for selector: ${selector}`);
@@ -1638,7 +1643,7 @@ const siteRules = {
   },
   uploadrar: {
     host: ["uploadrar.com"],
-    customStyle: `body{background:#121212!important;color:#dfdfdf!important}.blockpage{background:#121212!important;border:none!important;box-shadow:none!important}.title{color:#8277ec!important}.blockpage .desc span{color:#dfdfdf!important}.blockpage .desc p{color:#797979!important}`,
+    customStyle: `body,.subpage-content{background:#121212!important;color:#dfdfdf!important}.blockpage{background:#121212!important;border:none!important;box-shadow:none!important}.title{color:#8277ec!important}.blockpage .desc span{color:#dfdfdf!important}.blockpage .desc p{color:#797979!important}`,
     downloadPageCheckBySelector: [
       "#downloadbtn",
       "input[name='method_free']",
@@ -1667,6 +1672,8 @@ const siteRules = {
       "form > div > div.col-xs-12.col-sm-12.col-md-8.col-lg-8",
       "form[name='F1'] > .row",
       ".mngez-free-download", // initial button
+      ".app-footer",
+      "#backTop"
     ],
     removeByRegex: [{ query: ".txt", regex: /uploadrar|Cloud computing/gi }],
     removeIFrames: false,
