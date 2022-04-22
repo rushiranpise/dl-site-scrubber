@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    SiteScrubber
-// @version      2.1.1
+// @version      2.1.2
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -53,6 +53,7 @@
 // @include      /^(?:https?:\/\/)?(?:www\.)?filerio\.in\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?filelox\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?ddownload\.com\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?apk\.miuiku\.com\//
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
@@ -100,7 +101,7 @@ class SiteScrubber {
   }
   setup() {
     this.logDebug("Initializing SiteScrubber...");
-    
+
     this.console.groupCollapsed("ss-destroyWindowFunctions");
     this.destroyWindowFunctions(this.currSiteRules?.destroyWindowFunctions);
     this.console.groupEnd("ss-destroyWindowFunctions");
@@ -109,7 +110,7 @@ class SiteScrubber {
     if (this.ssButtonWatchDog === true) {
       // Ready, so click/submit
       this.waitUntilSelector(".ss-btn-ready").then((ssBtn) => {
-        // this.log("WOULD'VE CLICKED ss-btn", ssBtn);
+        this.log("WOULD'VE CLICKED ss-btn", ssBtn);
         ssBtn.click();
       });
     }
@@ -1673,7 +1674,7 @@ const siteRules = {
       "form[name='F1'] > .row",
       ".mngez-free-download", // initial button
       ".app-footer",
-      "#backTop"
+      "#backTop",
     ],
     removeByRegex: [{ query: ".txt", regex: /uploadrar|Cloud computing/gi }],
     removeIFrames: false,
@@ -5773,6 +5774,80 @@ const siteRules = {
     ],
     createCountdown: "",
     customScript() {},
+  },
+  miuiku: {
+    host: ["apk.miuiku.com"],
+    customStyle: `html,body,.g1-row-background,.content-wrapper,.box{background:#121212!important;color:#dfdfdf!important}`,
+    downloadPageCheckBySelector: ["#invisibleCaptchaShortlink", ".get-link"],
+    downloadPageCheckByRegex: [],
+    remove: [
+      ".g1-footer",
+      ".g1-prefooter",
+      ".g1-canvas-overlay",
+      ".g1-sticky-top-wrapper",
+      "#page > .g1-row-background",
+      "#page > .g1-hb-row",
+      ".g1-sidebar",
+      "[id*='ezoic-pub-ad']",
+      ".adsbygoogle",
+      "#formcontinue ~ *",
+      ".content > center",
+      ".content > p",
+      "[id*='teaser']",
+      ".entry-title",
+      ".main-header",
+      "#cookie-pop",
+      //"#test-block", // used to test if using ad blocker
+      ".main-footer",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [],
+    addInfoBanner: [],
+    createCountdown: { element: ".timer" },
+    modifyButtons: [
+      [
+        "#invisibleCaptchaShortlink",
+        { requiresCaptcha: false, customText: "Create Download Link" },
+      ],
+      [
+        ".get-link",
+        {
+          requiresCaptcha: false,
+          requiresTimer: true,
+          makeListener: true,
+          customText: "Get Link",
+          className: "get-link ss-animated-button ss-w-100",
+        },
+      ],
+    ],
+    customScript() {
+      if (this.$("#go-link")) {
+        this.waitUntilSelector(".ss-btn-ready").then(() => {
+          let e = window.$("#go-link");
+          window.$.ajax({
+            dataType: "json",
+            type: "POST",
+            url: e.attr("action"),
+            data: e.serialize(),
+            success: function (t) {
+              if (t?.url) {
+                $("a.get-link")
+                  .attr("href", t.url)
+                  .removeClass("disabled")
+                  .html(
+                    `Go To Download Page<span></span><span></span><span></span><span></span>`
+                  );
+                  document.querySelector(".ss-btn-ready").click();
+              }
+            },
+            complete: function (t, e) {},
+          });
+        });
+      }
+    },
   },
   NEWSITE: {
     host: [],

@@ -13,8 +13,11 @@ All major and minor version changes will be documented in this file. Details of 
 
 ## Details
 
+### [2.1.2] - 2022-04-21
+- Add support for apk.miuiku.com ⭐ ([Issue #12](https://github.com/PrimePlaya24/dl-site-scrubber/issues/12))
+
 ### [2.1.1] - 2022-04-21
-- Fixed issue in addCustomCSSStyle() (Issue #13)
+- Fixed issue in addCustomCSSStyle() ([Issue #13](https://github.com/PrimePlaya24/dl-site-scrubber/issues/13))
 - Updated script for UploadRar
 
 ### [2.1.0] - 2022-03-10

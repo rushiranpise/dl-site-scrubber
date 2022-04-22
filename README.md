@@ -47,6 +47,7 @@ SiteScrubber will:
 
 
 # List of Supported Sites [Updated 2021-10-04]
+- apk.miuiku.com ⭐
 - apkadmin.com ⭐
 - centfile.com
 - chedrive.com ⭐
