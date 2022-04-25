@@ -46,7 +46,7 @@ SiteScrubber will:
     - Watches for elements added dynamically as well
 
 
-# List of Supported Sites [Updated 2021-10-04]
+# List of Supported Sites [Updated 2022-04-24]
 - apk.miuiku.com ⭐
 - apkadmin.com ⭐
 - centfile.com
@@ -75,6 +75,7 @@ SiteScrubber will:
 - upfiles.io
 - upload-4ever.com
 - uploadev.org
+- uploady.io/uploadydl.com
 - uploadrar.com ⭐
 - usersdrive.com
 - userupload.in
