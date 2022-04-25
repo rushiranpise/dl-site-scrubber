@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    SiteScrubber
-// @version      2.1.2
+// @version      2.1.3
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -54,6 +54,7 @@
 // @include      /^(?:https?:\/\/)?(?:www\.)?filelox\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?ddownload\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?apk\.miuiku\.com\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?uploadydl\.com\//
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
@@ -611,6 +612,7 @@ class SiteScrubber {
       if (whitelist.includes(option)) {
         this.logDebug(`Skipping destroy of ${option}`);
         continue;
+      } else if (option) {
       }
       try {
         this.window.Object.defineProperty(this.window, option, {
@@ -681,6 +683,28 @@ class SiteScrubber {
         }
       };
     });
+  }
+  interceptXMLHttpRequest(fn) {
+    this.log("Adding XMLHttpRequest hook");
+    const _this = this;
+    const origXMLHttpRequest = window.XMLHttpRequest;
+    window.origXMLHttpRequest = origXMLHttpRequest;
+    window.origXMLHttpRequest.prototype.open =
+      origXMLHttpRequest.prototype.open;
+    window.XMLHttpRequest.prototype.open = function () {
+      let allow = true;
+      if (fn !== undefined && typeof fn === "function") {
+        allow = !!fn.apply(this, arguments);
+      } else if (arguments?.[0]?.url?.search("xxx") > -1) {
+        allow = false;
+      }
+      if (allow) {
+        return origXMLHttpRequest.prototype.open.apply(this, arguments);
+      } else {
+        _this.log("Stopped origXMLHttpRequest call");
+        _this.logDebug(`Blocked: ${arguments?.[0]?.url}`);
+      }
+    };
   }
   interceptAppendChild(fn) {
     const _this = this;
@@ -2065,8 +2089,8 @@ const siteRules = {
   },
   rapidgator: {
     host: ["rapidgator.net/file", "rapidgator.net/download/captcha"],
-    customStyle: `html{background:#121212!important}body{background:#121212!important;background-color:#121212!important;color:#dfdfdf!important}.container,.overall,.wrap-main-block{background:#121212!important}`,
-    downloadPageCheckBySelector: [".link.act-link.btn-free", "#captchaform"],
+    customStyle: `html,body,table,strong,.container,.overall,.wrap-main-block,.box-download{background:#121212!important;background-color:#121212!important;color:#dfdfdf!important}.download-timer{display:block!important;font-size:24px;padding:12px;}.btm3,.text-block{width:unset!important}.btm3{display:flex;flex-direction:column;align-items:center;}`,
+    downloadPageCheckBySelector: [".link.act-link.btn-free", "#captchaform", "div.in div.download-ready div.btm div.box-download a.btn.btn-download"],
     downloadPageCheckByRegex: [/slow speed download/gi],
     remove: [
       ".header",
@@ -2081,20 +2105,43 @@ const siteRules = {
       ".captcha_info",
       ".descr",
       "a.btn-premium",
+      "a > img",
     ],
-    removeByRegex: [],
+    removeByRegex: [{query: "p[align='center']", regex:/Downloading too long/gi}],
     hideElements: undefined,
     removeIFrames: true,
     removeDisabledAttr: true,
-    addInfoBanner: [],
+    addInfoBanner: [{targetElement: "div.main-block.wide", where:"afterend"}],
     modifyButtons: [
       ["form#captchaform a.btn", { requiresCaptcha: true, makeListener: true }],
       [
         "div.in div.download-ready div.btm div.box-download a.btn.btn-download",
-        { requiresCaptcha: true, makeListener: true },
+        {
+          fn() {
+            // the ending direct download link
+            const ddlURL =
+              document.body.textContent.match(
+                /return \'(http[s]?:\/\/(.*)?download(.*)?)\'/
+              )?.[1] ?? null;
+            if (ddlURL) {
+              const dlbtn = document.querySelector("div.in div.download-ready div.btm div.box-download a.btn.btn-download")
+              if (dlbtn) {
+                dlbtn.href = ddlURL;
+                dlbtn.innerHTML = `Download Now<span></span><span></span><span></span><span></span>`;
+              }
+            }
+          },
+        },
       ],
-      ["a.link.act-link.btn-free"],
+      [
+        "a.link.act-link.btn-free",
+        {
+          requiresTimer: true,
+          props: { href: "https://rapidgator.net/download/captcha" },
+        },
+      ],
     ],
+    createCountdown: { element: ".download-timer-seconds", timer: 45 },
     customScript() {
       this.ifElementExists("form#captchaform", () => {
         this.addInfoBanner({
@@ -2102,53 +2149,85 @@ const siteRules = {
         });
       });
 
-      sid = null;
-      fetch(`https://rapidgator.net/download/AjaxStartTimer?fid=${fid}`, {
-        headers: {
-          accept: "application/json, text/javascript, */*; q=0.01",
-          "accept-language": "en-US,en;q=0.9",
-          "sec-fetch-dest": "empty",
-          "sec-fetch-mode": "cors",
-          "sec-fetch-site": "same-origin",
-          "sec-gpc": "1",
-          "x-requested-with": "XMLHttpRequest",
-        },
-        body: null,
-        method: "GET",
-        mode: "cors",
-        credentials: "include",
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          sid = data.sid;
-        });
-      fetch(`https://rapidgator.net/download/AjaxGetDownloadLink?sid=${sid}`, {
-        headers: {
-          accept: "application/json, text/javascript, */*; q=0.01",
-          "accept-language": "en-US,en;q=0.9",
-          "sec-fetch-dest": "empty",
-          "sec-fetch-mode": "cors",
-          "sec-fetch-site": "same-origin",
-          "sec-gpc": "1",
-          "x-requested-with": "XMLHttpRequest",
-        },
-        body: null,
-        method: "GET",
-        mode: "cors",
-        credentials: "include",
-      })
-        .then((res) => res.json())
-        .then((data) => console.log(data));
-
-      // the ending direct download link
-      const ddlURL =
-        document.body.textContent.match(
-          /return \'(http[s]?:\/\/(.*)?download(.*)?)\'/
-        )?.[1] ?? null;
-      if (ddlURL) {
-        this.log("DDL Link was found on this page.");
-        this.openNative(ddlURL, "_self");
-        this.log(`Opening DDL link for file: ${ddlURL}`);
+      if (this.$(".download-timer")) {
+        let table_header = this.$("#table_header");
+        if (
+          table_header &&
+          table_header.textContent.match(/downloads limit|Delay between downloads/gi)
+        ) {
+          // reached download limit so script won't continue
+          document
+            .querySelector(".download-timer")
+            ?.insertAdjacentHTML(
+              "afterend",
+              `<p>siteScrubber is stopping because you've reached the download limit. (Use a VPN to get a new IP address)</p>`
+            );
+          return;
+        }
+        sid = null;
+        fetch(`https://rapidgator.net/download/AjaxStartTimer?fid=${fid}`, {
+          headers: {
+            accept: "application/json, text/javascript, */*; q=0.01",
+            "accept-language": "en-US,en;q=0.9",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-origin",
+            "sec-gpc": "1",
+            "x-requested-with": "XMLHttpRequest",
+          },
+          body: null,
+          method: "GET",
+          mode: "cors",
+          credentials: "include",
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            document
+              .querySelector(".download-timer")
+              ?.insertAdjacentHTML(
+                "afterend",
+                `<p>1st Request=${JSON.stringify(data)}</p>`
+              );
+            sid = data.sid;
+          });
+        setTimeout(() => {
+          fetch(
+            `https://rapidgator.net/download/AjaxGetDownloadLink?sid=${sid}`,
+            {
+              headers: {
+                accept: "application/json, text/javascript, */*; q=0.01",
+                "accept-language": "en-US,en;q=0.9",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "sec-gpc": "1",
+                "x-requested-with": "XMLHttpRequest",
+              },
+              body: null,
+              method: "GET",
+              mode: "cors",
+              credentials: "include",
+            }
+          )
+            .then((res) => res.json())
+            .then((data) => {
+              document
+                .querySelector(".download-timer")
+                ?.insertAdjacentHTML(
+                  "afterend",
+                  `<p>2nd Request=${JSON.stringify(data)}</p>`
+                );
+              document
+                .querySelector(".download-timer")
+                ?.insertAdjacentHTML(
+                  "afterend",
+                  `<p>Ready to go to CAPTCHA page. Click the button to navigate to the next page.</p>`
+                );
+              document
+                .querySelector(".ss-animated-button")
+                ?.classList?.add("ss-btn-ready");
+            });
+        }, 45 * 1000);
       }
     },
   },
@@ -5777,7 +5856,7 @@ const siteRules = {
   },
   miuiku: {
     host: ["apk.miuiku.com"],
-    customStyle: `html,body,.g1-row-background,.content-wrapper,.box{background:#121212!important;color:#dfdfdf!important}`,
+    customStyle: `html,body,.g1-row-background,.content-wrapper,.box{background:#121212!important;color:#dfdfdf!important}#ignielAdBlock{display:none!important}`,
     downloadPageCheckBySelector: ["#invisibleCaptchaShortlink", ".get-link"],
     downloadPageCheckByRegex: [],
     remove: [
@@ -5799,18 +5878,38 @@ const siteRules = {
       "#cookie-pop",
       //"#test-block", // used to test if using ad blocker
       ".main-footer",
+      "#ignielAdBlock",
+      ".klikdisini",
     ],
     removeByRegex: [],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
-    destroyWindowFunctions: [],
+    destroyWindowFunctions: [
+      "adsbygoogle",
+      "_Hasync",
+      "push",
+      "sc",
+      "h",
+      "offsetTop",
+      "adblock",
+      "chfh",
+      "chfh2",
+      "_HST_cntval",
+      "Histats",
+      "_HistatsCounterGraphics_0_setValues",
+      "String.fromCharCode",
+    ],
     addInfoBanner: [],
     createCountdown: { element: ".timer" },
     modifyButtons: [
       [
         "#invisibleCaptchaShortlink",
-        { requiresCaptcha: false, customText: "Create Download Link" },
+        {
+          requiresCaptcha: false,
+          replaceWithTag: "button",
+          customText: "Create Download Link",
+        },
       ],
       [
         ".get-link",
@@ -5825,28 +5924,220 @@ const siteRules = {
     ],
     customScript() {
       if (this.$("#go-link")) {
-        this.waitUntilSelector(".ss-btn-ready").then(() => {
-          let e = window.$("#go-link");
-          window.$.ajax({
-            dataType: "json",
-            type: "POST",
-            url: e.attr("action"),
-            data: e.serialize(),
-            success: function (t) {
-              if (t?.url) {
-                $("a.get-link")
-                  .attr("href", t.url)
-                  .removeClass("disabled")
-                  .html(
-                    `Go To Download Page<span></span><span></span><span></span><span></span>`
-                  );
+        let customButtonFunc = () => {
+          this.waitUntilSelector(".ss-btn-ready").then(() => {
+            let e = window.$("#go-link");
+            window.$.ajax({
+              dataType: "json",
+              type: "POST",
+              url: e.attr("action"),
+              data: e.serialize(),
+              success: function (t) {
+                if (t?.url) {
+                  $("a.get-link")
+                    .attr("href", t.url)
+                    .removeClass("disabled")
+                    .html(
+                      `Go To Download Page<span></span><span></span><span></span><span></span>`
+                    );
                   document.querySelector(".ss-btn-ready").click();
-              }
-            },
-            complete: function (t, e) {},
+                }
+              },
+              complete: function (t, e) {},
+            });
           });
-        });
+        };
+        this.$(".ss-btn")?.addEventListener("click", customButtonFunc, false);
       }
+    },
+  },
+  uploady: {
+    // same as userupload
+    host: ["uploadydl.com"],
+    customStyle: `html,body,.bg-white,.file-info,h4{background:#121212!important;color:#dfdfdf!important}`,
+    downloadPageCheckBySelector: ["#downloadbtn"],
+    downloadPageCheckByRegex: [
+      /Create download link/gi,
+      /Click here to download/gi,
+      /Download link generated/gi,
+    ],
+    remove: [
+      "nav",
+      "#st_gdpr_iframe",
+      "#banner_ad",
+      "footer",
+      "div.report",
+      ".adsbygoogle",
+      ".bannerad",
+      ".aboutFile",
+      "#orquidea-slideup",
+      "body > #container > style",
+      "body > #container > script",
+      "body > span > u",
+      "center",
+      ".page-content",
+      "#countdown ~ a.btn-link.alert",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "setPagination",
+      "_gaq",
+      "timeout",
+      "adsbygoogle",
+      "__gcse",
+      "delComment",
+      "player_start",
+      "_gat",
+      "gaGlobal",
+      "clipboard",
+      "__rocketLoaderEventCtor",
+      "__rocketLoaderLoadProgressSimulator",
+      "__cfQR",
+      "st",
+      "__stdos__",
+      "tpcCookiesEnableCheckingDone",
+      "tpcCookiesEnabledStatus",
+      "__sharethis__docReady",
+      "__sharethis__",
+      "google_js_reporting_queue",
+      "google_srt",
+      "google_logging_queue",
+      "google_ad_modifications",
+      "ggeac",
+      "google_measure_js_timing",
+      "google_reactive_ads_global_state",
+      "_gfp_a_",
+      "google_sa_queue",
+      "google_sl_win",
+      "google_process_slots",
+      "google_apltlad",
+      "google_spfd",
+      "google_lpabyc",
+      "google_unique_id",
+      "google_sv_map",
+      "google_user_agent_client_hint",
+      "Goog_AdSense_getAdAdapterInstance",
+      "Goog_AdSense_OsdAdapter",
+      "google_sa_impl",
+      "google_persistent_state_async",
+      "__google_ad_urls",
+      "google_global_correlator",
+      "__google_ad_urls_id",
+      "googleToken",
+      "googleIMState",
+      "_gfp_p_",
+      "processGoogleToken",
+      "google_prev_clients",
+      "goog_pvsid",
+      "google_jobrunner",
+      "ampInaboxIframes",
+      "ampInaboxPendingMessages",
+      "goog_sdr_l",
+      "google_osd_loaded",
+      "google_onload_fired",
+      "module$exports$cse$search",
+      "module$exports$cse$CustomImageSearch",
+      "module$exports$cse$CustomWebSearch",
+      "google",
+      "module$exports$cse$searchcontrol",
+      "module$exports$cse$customsearchcontrol",
+      "closure_lm_969024",
+      "Goog_Osd_UnloadAdBlock",
+      "Goog_Osd_UpdateElementToMeasure",
+      "google_osd_amcb",
+      "googletag",
+      "__AMP_LOG",
+      "__AMP_ERRORS",
+      "ampInaboxInitialized",
+      "__AMP_MODE",
+      "__AMP_REPORT_ERROR",
+      "ampInaboxPositionObserver",
+      "ampInaboxFrameOverlayManager",
+      "AMP",
+      "FuckAdBlock",
+      "fuckAdBlock",
+      "xcJQCflAmpis",
+      "KkUCuxqIgh",
+      "VABjXzYzJp",
+      "WSpSwDLzQd",
+      "nsJjjBITZC",
+      "neMuFFBFgq",
+      "rMwHazIJjv",
+      "BGWRSzJxTu",
+      "c2",
+      "c1",
+      "u4QPe94lDBw7",
+      "cfVDoTdmsN",
+      "adBlockDetected",
+      "adBlockNotDetected",
+      "checkAgain",
+      "__cfRLUnblockHandlers",
+      "closure_lm_187383",
+      "GoogleGcLKhOms",
+      "google_image_requests",
+      "x",
+      "spimg",
+      "c",
+      "d",
+      "zk5mz489hep",
+      "zfgformats",
+      "onClickTrigger",
+      "zfgloadedpopup",
+      "ppuWasShownFor4194753",
+      "qsx3bu3x73",
+      "ppuWasShownFor3481353",
+      "google_ad_client",
+      "google_ad_slot",
+      "google_ad_width",
+      "google_ad_height",
+      "interstitialSlot",
+      "s65c",
+      "closure_lm_409666",
+      "h1j2jxd88xv",
+      "__core-js_shared__",
+      "1bgbb027-3b87-ae67-26ar-hz150f600z16",
+      "ppuWasShownFor4635651",
+      "fetch",
+    ],
+    addInfoBanner: [
+      { targetElement: "form[name='F1'] .row", where: "beforeend" },
+    ],
+    modifyButtons: [
+      [
+        "#downloadbtn",
+        {
+          requiresCaptcha: true,
+          requiresTimer: true,
+          makeListener: true,
+          props: { disabled: false, type: "submit" },
+          moveTo: { target: ".download-btn", position: "beforebegin" },
+        },
+      ],
+      ["form a[type='button']", { replaceWithForm: true }],
+    ],
+    createCountdown: { element: ".seconds" },
+    customScript() {
+      // aesthetics
+      this.$$(".col-lg-4")?.forEach((e) => {
+        e.classList.replace("col-lg-4", "col-lg-12");
+      });
+      this.$$(".border")?.forEach((e) => {
+        e.classList.remove("border");
+      });
+
+      this.interceptXMLHttpRequest(function () {
+        // only allow AJAX requests to Google.com
+        if (arguments?.[1].match(/^https:\/\/(www\.)?google\.com/)) {
+          return true;
+        }
+        return false;
+      });
+
+      // stop ads
+      this.waitUntilSelector("body > iframe").then((iframe) => iframe.remove());
     },
   },
   NEWSITE: {
