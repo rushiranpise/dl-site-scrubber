@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    SiteScrubber
-// @version      2.1.3
+// @version      2.1.4
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -55,6 +55,7 @@
 // @include      /^(?:https?:\/\/)?(?:www\.)?ddownload\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?apk\.miuiku\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?uploadydl\.com\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?dropgalaxy\.(com)\//
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
@@ -703,6 +704,23 @@ class SiteScrubber {
       } else {
         _this.log("Stopped origXMLHttpRequest call");
         _this.logDebug(`Blocked: ${arguments?.[0]?.url}`);
+      }
+    };
+  }
+  interceptPreventDefault(fn) {
+    this.log("Adding preventDefault hook");
+    const _this = this;
+    const origPreventDefault = Event.prototype.preventDefault;
+    this.window.origPreventDefault = origPreventDefault;
+    Event.prototype.preventDefault = function () {
+      let allow = true;
+      if (fn !== undefined && typeof fn === "function") {
+        allow = !!fn.apply(this, arguments);
+      }
+      if (allow) {
+        return origPreventDefault.apply(this, arguments);
+      } else {
+        _this.log("Stopped preventDefault call");
       }
     };
   }
@@ -1426,6 +1444,9 @@ const siteRules = {
       if (this.$(".g-recaptcha")) {
         this.addGoogleRecaptchaJS();
       }
+      this.interceptPreventDefault(() => {
+        return false;
+      });
     },
   },
   "up-load.io": {
@@ -2090,7 +2111,11 @@ const siteRules = {
   rapidgator: {
     host: ["rapidgator.net/file", "rapidgator.net/download/captcha"],
     customStyle: `html,body,table,strong,.container,.overall,.wrap-main-block,.box-download{background:#121212!important;background-color:#121212!important;color:#dfdfdf!important}.download-timer{display:block!important;font-size:24px;padding:12px;}.btm3,.text-block{width:unset!important}.btm3{display:flex;flex-direction:column;align-items:center;}`,
-    downloadPageCheckBySelector: [".link.act-link.btn-free", "#captchaform", "div.in div.download-ready div.btm div.box-download a.btn.btn-download"],
+    downloadPageCheckBySelector: [
+      ".link.act-link.btn-free",
+      "#captchaform",
+      "div.in div.download-ready div.btm div.box-download a.btn.btn-download",
+    ],
     downloadPageCheckByRegex: [/slow speed download/gi],
     remove: [
       ".header",
@@ -2107,11 +2132,15 @@ const siteRules = {
       "a.btn-premium",
       "a > img",
     ],
-    removeByRegex: [{query: "p[align='center']", regex:/Downloading too long/gi}],
+    removeByRegex: [
+      { query: "p[align='center']", regex: /Downloading too long/gi },
+    ],
     hideElements: undefined,
     removeIFrames: true,
     removeDisabledAttr: true,
-    addInfoBanner: [{targetElement: "div.main-block.wide", where:"afterend"}],
+    addInfoBanner: [
+      { targetElement: "div.main-block.wide", where: "afterend" },
+    ],
     modifyButtons: [
       ["form#captchaform a.btn", { requiresCaptcha: true, makeListener: true }],
       [
@@ -2124,7 +2153,9 @@ const siteRules = {
                 /return \'(http[s]?:\/\/(.*)?download(.*)?)\'/
               )?.[1] ?? null;
             if (ddlURL) {
-              const dlbtn = document.querySelector("div.in div.download-ready div.btm div.box-download a.btn.btn-download")
+              const dlbtn = document.querySelector(
+                "div.in div.download-ready div.btm div.box-download a.btn.btn-download"
+              );
               if (dlbtn) {
                 dlbtn.href = ddlURL;
                 dlbtn.innerHTML = `Download Now<span></span><span></span><span></span><span></span>`;
@@ -2153,7 +2184,9 @@ const siteRules = {
         let table_header = this.$("#table_header");
         if (
           table_header &&
-          table_header.textContent.match(/downloads limit|Delay between downloads/gi)
+          table_header.textContent.match(
+            /downloads limit|Delay between downloads/gi
+          )
         ) {
           // reached download limit so script won't continue
           document
@@ -5881,7 +5914,7 @@ const siteRules = {
       "#ignielAdBlock",
       ".klikdisini",
     ],
-    removeByRegex: [],
+    removeByRegex: [{ query: "style", regex: /ignielAdBlock \.isiAds/gi }],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
@@ -5898,7 +5931,7 @@ const siteRules = {
       "_HST_cntval",
       "Histats",
       "_HistatsCounterGraphics_0_setValues",
-      "String.fromCharCode",
+      "parseInt", // destroy parseInt() which is used by ignielAdBlock()
     ],
     addInfoBanner: [],
     createCountdown: { element: ".timer" },
@@ -6138,6 +6171,350 @@ const siteRules = {
 
       // stop ads
       this.waitUntilSelector("body > iframe").then((iframe) => iframe.remove());
+    },
+  },
+  dropgalaxy: {
+    host: ["dropgalaxy.com"],
+    customStyle: `html,body,.fileInfo{background:#121212!important;color:#dfdfdf!important}.ss-hide,iframe[data-aa],.grid-container,.grid-container > .item,.aplvideo,.anibox{display:none!important}`,
+    downloadPageCheckBySelector: ["#method_free", "#downloadBtnClick", "#dl"],
+    downloadPageCheckByRegex: [/Adblock Detected!/gi],
+    remove: [
+      "#uniccmp",
+      "nav",
+      "#fetchhh",
+      "body > br",
+      "#uniconsent-config",
+      "#nativefluid",
+      ".pgAdWrapper",
+      ".adSpinner",
+      "footer",
+      "#adhesive_container",
+      "#adhesive_banner",
+      // "body > iframe",
+      // "[id^='div-gpt-ad']",
+      "div#dns",
+      "br",
+      "#analytics",
+      "h1.text-primary",
+      "button[name='method_premium']",
+      "#method_free2",
+      "#modalpop",
+      "#overlaypop",
+      "#countdown + div[class='mt-5 text-center']",
+      ".container.page.faq",
+      "center",
+    ],
+    removeByRegex: [
+      { query: "body *", regex: /webpack_modules/gi },
+      {
+        query: "style",
+        regex:
+          /\.proads-space|purgecss|\.unic|\.adSpinner|\.pg_close-ad-btn|#news_last|\.modalpop/gi,
+      },
+      { query: ".downloadPage div.col-md-12.py-3", regex: /sophisticated/gi },
+      { query: ".downloadPage div.col-md-8.mt-5", regex: /sophisticated/gi },
+      {
+        query: "script",
+        regex: /fetchhh\(/gi,
+      },
+      { query: ".downloadPage div.col-md-12.mt-5", regex: /leech/gi },
+    ],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      // "$",
+      // "jQuery",
+      "__tcfapi",
+      "__uspapi",
+      "adsbygoogle",
+      "removeURLParameter",
+      "getParameterByName",
+      "updateQueryStringParameter",
+      "setPagination",
+      // "linksucess",
+      // "go",
+      "freed",
+      "_0x16d8",
+      "_0xc6b3ab",
+      "_0x3cbc13",
+      "_0x112ff3",
+      "_0x105c91",
+      "_0x1b9f42",
+      "_0x25716d",
+      "goog_pvsid",
+      "ggeac",
+      "google_tag_data",
+      "google_js_reporting_queue",
+      "__core-js_shared__",
+      "gptAdSlots",
+      "interstitialSlot",
+      "staticSlot",
+      "anchorSlot",
+      "vmpbjs",
+      "vpb",
+      "__unic_cmp_id",
+      // "__unic_cmp_host",
+      // "__unic_loadapp",
+      "google_measure_js_timing",
+      "emptyFn",
+      "google_DisableInitialLoad",
+      "protag_matomo_domain",
+      "protag_matomo_SiteID",
+      "google_reactive_ads_global_state",
+      "colors",
+      "setStyleSheet",
+      "changecolor",
+      "ClipboardJS",
+      "unicj",
+      "__unic_start",
+      "UnicI",
+      "__cfBeacon",
+      "__unicapi",
+      "__unic_tags_loaded",
+      "e",
+      "__adb",
+      "site",
+      "document.write",
+      "colortheme",
+      "color",
+      "_0x4a8e",
+      "protag",
+      "googletag",
+      "showFullScreen",
+      "isDesktop",
+      "agentt",
+      "ftch",
+      // "LALLJLutmoZpvvbikjaWM", // encoder
+      // "tokn",
+      // "toknst",
+      "mousehandler",
+      "disableCtrlKeyCombination",
+      "loaded",
+      "timeout",
+      "_VLIOBJ",
+      "vitag",
+      "getEidsByVLI",
+      "tagApi",
+      "viAPItag",
+      "observeElementInViewport",
+      "vlipbChunk",
+      "vlipb",
+      "_pbjsGlobals",
+      "ADAGIO",
+      "mnet",
+      "nobidVersion",
+      "nobid",
+      "$sf",
+      "_google_rum_ns_",
+      "google_persistent_state_async",
+      "google_global_correlator",
+      "google_srt",
+      "mb",
+      "Goog_AdSense_Lidar_sendVastEvent",
+      "Goog_AdSense_Lidar_getViewability",
+      "Goog_AdSense_Lidar_getUrlSignalsArray",
+      "Goog_AdSense_Lidar_getUrlSignalsList",
+      "module$contents$ima$CompanionAdSelectionSettings_CompanionAdSelectionSettings",
+      "module$contents$ima$AdsRenderingSettings_AdsRenderingSettings",
+      "ima",
+      "module$contents$ima$AdCuePoints_AdCuePoints",
+      "module$contents$ima$AdError_AdError",
+      "module$contents$ima$AdErrorEvent_AdErrorEvent",
+      "module$contents$ima$AdEvent_AdEvent",
+      "module$contents$ima$AdsManagerLoadedEvent_AdsManagerLoadedEvent",
+      "google",
+      "pgDevice",
+    ],
+    addInfoBanner: [{ targetElement: ".downloadPage", where: "beforeend" }],
+    createCountdown: { element: ".seconds", timer: 6 },
+    modifyButtons: [
+      ["button#method_free", { makeListener: false, props: { style: "" } }],
+      [
+        "#downloadBtnClick",
+        { requiresTimer: true, makeListener: true, props: { style: "" } },
+      ],
+      [
+        "button#dl",
+        {
+          makeListener: false,
+          customText: "Download Now",
+          props: { onclick: null, style: "" },
+        },
+      ],
+    ],
+    customScript() {
+      // aethestics
+      document.body?.classList?.replace("white", "dark");
+      this.window?.["setStyleSheet"]?.(
+        "https://dropgalaxy.com/assets/styles/dark.min.css"
+      );
+      this.$$(".col-md-4").forEach((ele) =>
+        ele.classList.replace("col-md-4", "col-md-12")
+      );
+      // enable right-click
+      document.body.oncontextmenu = () => {};
+
+      this.$("#downloadhash") && (this.$("#downloadhash").value = "1");
+      this.$("#badip") && (this.$("#badip").value = "0");
+      this.$("#gads") && (this.$("#gads").value = "1");
+      // this.interceptAppendChild(() => {
+      //   console.log("args", arguments);
+      // });
+      this.interceptAddEventListeners(() => {
+        return false;
+      });
+
+      // Page cleaner 1
+      const mutationConfig = {
+        attributes: false,
+        childList: true,
+        subtree: true,
+      };
+      const mutationCallback = (mutationList, observer) => {
+        for (const mutation of mutationList) {
+          const list = [mutation.target, ...mutation.addedNodes];
+          for (const node of list) {
+            if (
+              node?.tagName === "IFRAME" ||
+              node?.tagName === "IMG" ||
+              node?.tageName === "VLI"
+            ) {
+              node.height = "0";
+              node.width = "0";
+              node.src = `about:blank`;
+              node.style.display = "none";
+              node?.removeAttribute("id");
+              node?.removeAttribute("name");
+              node.classList.add("ss-hide");
+              this.logDebug(
+                `MutationObserver - Modded ${node?.tagName}:`,
+                node
+              );
+            }
+          }
+        }
+      };
+      const drpglxyObserver = new MutationObserver(mutationCallback);
+      drpglxyObserver.observe(document.documentElement, mutationConfig);
+
+      // Page cleaner 2
+      setInterval(() => {
+        this.$$("body *").forEach((node) => {
+          if (
+            node?.tagName === "IFRAME" ||
+            node?.tagName === "IMG" ||
+            node?.tageName === "VLI"
+          ) {
+            if (node.src == `about:blank`) {
+              return;
+            }
+            node.height = "0";
+            node.width = "0";
+            node.src = `about:blank`;
+            node.style.display = "none";
+            node?.removeAttribute("id");
+            node?.removeAttribute("name");
+            node.classList.add("ss-hide");
+            this.logDebug(`Cleaner - Modded ${node?.tagName}:`, node);
+          }
+        });
+      }, 500);
+
+      if (document.documentElement.outerHTML.match(/Adblock Detected!/gi)) {
+        // Go back and try again on token page
+        window.history.back();
+      }
+
+      // if on token page
+      if (this.$("#xd")) {
+        let divs = "";
+        for (let i = 0; i < Math.floor(Math.random() * 25 + 50); i++) {
+          divs += `<div></div>`;
+        }
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          `<div style="display:none" class='ss-hide'>${divs}</div>`
+        );
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          `<vli style="display:none" class='ss-hide'></vli><vli style="display:none" class='ss-hide'></vli>`
+        );
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          `<iframe src="about:blank" style="display:none" class='ss-hide' data-ex-slot-check></iframe><iframe src="about:blank" style="display:none" class='ss-hide' data-ex-slot-check></iframe><iframe src="about:blank" style="display:none" class='ss-hide' data-ex-slot-check></iframe>`
+        );
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          `<style>/*ps-pulse*/</style>`
+        );
+        setTimeout(() => {
+          const xd = this.$("#xd");
+          if (xd.value.length > 2) {
+            this.$("#tokenstatus").insertAdjacentHTML("afterend", `<small style="display: block; word-break: break-all;">#xd.value = '${xd.value}'</small>`);
+            if (xd.value.match(/^SU/)) {
+              this.removeInterval("ss-btn-ready-listner");
+            } else {
+              this.$("#tokenstatus").insertAdjacentHTML("afterend", `<small style="display: block; word-break: break-all;">Should be ready to submit</small>`);
+            }
+          }
+        }, 4 * 1000);
+      }
+
+      // // manually get token
+      // if (this.$("#xd") && false) {
+      //   const countdown_js_url =
+      //     document.documentElement.outerHTML.match(/getScript\("(.*)?"/)?.[1];
+      //   countdown_js_url &&
+      //     fetch(countdown_js_url + `&_=${+new Date()}`, {
+      //       headers: {
+      //         accept: "*/*",
+      //         "accept-language": "en-US,en;q=0.9",
+      //         "sec-fetch-dest": "script",
+      //         "sec-fetch-mode": "no-cors",
+      //         "sec-fetch-site": "cross-site",
+      //         "sec-gpc": "1",
+      //       },
+      //       referrer: "https://dropgalaxy.com/",
+      //       referrerPolicy: "strict-origin-when-cross-origin",
+      //       body: null,
+      //       method: "GET",
+      //       mode: "cors",
+      //       credentials: "omit",
+      //     })
+      //       .then((res) => console.log(res))
+      //       .then(() => {
+      //         fetch("https://a2zapk.com/dl/getapklist.php", {
+      //           headers: {
+      //             accept: "application/json, text/javascript, */*; q=0.01",
+      //             "accept-language": "en-US,en;q=0.9",
+      //             "sec-fetch-dest": "empty",
+      //             "sec-fetch-mode": "cors",
+      //             "sec-fetch-site": "cross-site",
+      //             "sec-gpc": "1",
+      //           },
+      //           referrer: "https://dropgalaxy.com/",
+      //           referrerPolicy: "strict-origin-when-cross-origin",
+      //           body: null,
+      //           method: "POST",
+      //           mode: "cors",
+      //           credentials: "omit",
+      //         })
+      //           .then((res) => res.json())
+      //           .then((links) => {
+      //             console.log("links:", links);
+      //             const link = links[Math.floor(Math.random() * links.length)];
+      //             console.log("link:", link);
+      //             fetch(link, {
+      //               method: "POST",
+      //               mode: "no-cors",
+      //               credentials: "omit",
+      //             });
+      //           });
+      //       });
+
+      //   setTimeout(xdFunc, 5 * 1000);
+      // }
     },
   },
   NEWSITE: {
