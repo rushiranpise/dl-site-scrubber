@@ -46,7 +46,7 @@ SiteScrubber will:
     - Watches for elements added dynamically as well
 
 
-# List of Supported Sites [Updated 2022-04-24]
+# List of Supported Sites [Updated 2022-04-26]
 - apk.miuiku.com ⭐
 - apkadmin.com ⭐
 - centfile.com
@@ -58,6 +58,7 @@ SiteScrubber will:
 - dlupload.com
 - douploads.net
 - drop.download ⭐
+- dropgalaxy.com ⭐
 - fastclick.to
 - file-upload.com
 - file4.net

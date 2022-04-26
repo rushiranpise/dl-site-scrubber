@@ -13,6 +13,11 @@ All major and minor version changes will be documented in this file. Details of 
 
 ## Details
 
+### [2.1.4] - 2022-04-26
+- Add support for DropGalaxy.com again
+    - Resolve related issues ([Issue #10](https://github.com/PrimePlaya24/dl-site-scrubber/issues/10) and [Issue #11](https://github.com/PrimePlaya24/dl-site-scrubber/issues/11))
+- Add interceptPreventDefault() function
+
 ### [2.1.3] - 2022-04-24
 - Fix issues and update methods for RapidGator ([Issue #14](https://github.com/PrimePlaya24/dl-site-scrubber/issues/14))
 - Add support for uploady.io/uploadydl.com
