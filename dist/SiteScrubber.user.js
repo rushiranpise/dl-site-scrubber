@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    SiteScrubber
-// @version      2.1.4
+// @version      2.1.5
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -151,16 +151,6 @@ class SiteScrubber {
   }
   logDebugNaked(str) {
     if (this.o_debug) this.logNative(str);
-  }
-  plug(data) {
-    if (arguments.callee.counter) {
-      arguments.callee.counter++;
-    } else {
-      arguments.callee.counter = 1;
-    }
-    this.logDebug(data);
-    this.logDebugNaked(arguments);
-    // this.window.alert(data);
   }
   ifElementExists(query, fn = () => void 0) {
     return this.$(query) && fn(this.$(query));
@@ -1059,6 +1049,7 @@ const siteRules = {
       "button#method_free",
       "button#downloadbtn",
       "div.download_box",
+      "a.btn.btn-download",
     ],
     downloadPageCheckByRegex: [
       /Slow download/gi,
@@ -1066,97 +1057,54 @@ const siteRules = {
       /Enter code below/gi,
     ],
     remove: [
-      ".adsbox",
-      "#content",
-      ".features__section",
-      "footer",
-      "nav",
-      ".payment_methods",
-      "adsbox",
-      ".features",
-      "div.header",
-      // "#container > form > div > div > div.col-md-4:nth-child(-n+3)",
+      "header.header_",
+      "footer.footer_",
+      ".adsbygoogle",
+      "div.row.payment_table",
+      "div.dowload-features",
+      "a.download-btn.btn.bg-gradient-1.border-0.text-white.px-xl-5.rounded-pill.btn-lg.text-uppercase.mb-5.py-3",
+      "br",
     ],
-    removeByRegex: [{ query: ".download_method", regex: /fast download/gi }],
+    removeByRegex: [
+      { query: ".div.col-6 > a", regex: /fast download/gi },
+      {
+        query: "div.h2.text-center.mb-3",
+        regex: /choose from one of our packages/gi,
+      },
+    ],
     removeIFrames: true,
     removeDisabledAttr: true,
     destroyWindowFunctions: [
       "setPagination",
+      "adsbygoogle",
+      "Dialogs",
       "gtag",
       "dataLayer",
       "google_tag_manager",
-      "google_js_reporting_queue",
-      "google_srt",
-      "google_logging_queue",
-      "google_ad_modifications",
-      "ggeac",
-      "google_measure_js_timing",
-      "google_reactive_ads_global_state",
-      "_gfp_a_",
-      "adsbygoogle",
       "google_tag_data",
       "GoogleAnalyticsObject",
       "ga",
-      "google_user_agent_client_hint",
-      "google_sa_queue",
-      "google_sl_win",
-      "google_process_slots",
-      "google_apltlad",
-      "google_spfd",
-      "google_lpabyc",
-      "google_unique_id",
-      "google_sv_map",
-      "Dialogs",
-      "__core-js_shared__",
-      "feather",
-      "google_ama_state",
-      "gaplugins",
-      "gaGlobal",
-      "gaData",
-      "Goog_AdSense_getAdAdapterInstance",
-      "Goog_AdSense_OsdAdapter",
-      "google_sa_impl",
-      "google_persistent_state_async",
-      "__google_ad_urls",
-      "google_global_correlator",
-      "__google_ad_urls_id",
-      "googleToken",
-      "googleIMState",
-      "_gfp_p_",
-      "processGoogleToken",
-      "google_prev_clients",
-      "goog_pvsid",
-      "google_jobrunner",
-      "ampInaboxIframes",
-      "ampInaboxPendingMessages",
-      "goog_sdr_l",
-      "google_osd_loaded",
-      "google_onload_fired",
-      "Goog_Osd_UnloadAdBlock",
-      "Goog_Osd_UpdateElementToMeasure",
-      "google_osd_amcb",
-      "google_llp",
-      "googletag",
-      "GoogleGcLKhOms",
-      "google_image_requests",
-      "timeout",
       "delComment",
       "player_start",
-      "showFullScreen",
     ],
-    addInfoBanner: [{ targetElement: "div.download_box" }],
+    addInfoBanner: [{ targetElement: "form", where: "afterend" }],
     modifyButtons: [
       ["button#method_free", { customText: "Free Download" }],
       ["button#downloadbtn", { requiresCaptcha: true }],
       ["div.download_box > a", { replaceWithForm: true }],
+      ["a.btn.btn-download", { replaceWithForm: true }],
     ],
     customScript() {
       // automation
-      const captcha_box = this.$(
-        ".download_box table td > div[style]:not([class])"
-      );
-      if (captcha_box) {
-        const captcha_code = [...captcha_box?.children]
+      const captchaTable = this.$("table");
+      const isCaptchaBoxPresent =
+        captchaTable.querySelector("b")?.textContent == "Enter code below:";
+      if (isCaptchaBoxPresent) {
+        const captchaCode = [
+          ...captchaTable.querySelectorAll(
+            "tr:nth-child(2) td:nth-child(1) > div span"
+          ),
+        ]
           .sort(
             (x, y) =>
               x.getAttribute("style").match(/padding-left:(\d+)/)?.[1] -
@@ -1164,7 +1112,7 @@ const siteRules = {
           )
           .map((e) => e.textContent)
           .join("");
-        this.$("input.captcha_code").value = captcha_code;
+        this.$("input.captcha_code")?.setAttribute("value", captchaCode);
         document.forms?.F1?.submit();
       }
 
@@ -1173,14 +1121,12 @@ const siteRules = {
         "div[style*='direction:ltr']",
         (div) => (div.style.background = "#000")
       );
-      this.$$(".col-md-4").forEach((div) =>
-        div.classList.replace("col-md-4", "col-12")
+      this.$$(".col-6").forEach((div) =>
+        div.classList.replace("col-6", "col-12")
       );
-      this.$("p.mb-5")?.classList.remove("mb-5");
-      this.addInfoBanner({
-        targetElement: "#container .container .row",
-        where: "beforeend",
-      });
+      [...this.$$("div")]
+        .filter((div) => div.textContent.trim().length == 0)
+        .forEach((e) => e.remove());
     },
   },
   mixloads: {
@@ -6451,11 +6397,17 @@ const siteRules = {
         setTimeout(() => {
           const xd = this.$("#xd");
           if (xd.value.length > 2) {
-            this.$("#tokenstatus").insertAdjacentHTML("afterend", `<small style="display: block; word-break: break-all;">#xd.value = '${xd.value}'</small>`);
+            this.$("#tokenstatus").insertAdjacentHTML(
+              "afterend",
+              `<small style="display: block; word-break: break-all;">#xd.value = '${xd.value}'</small>`
+            );
             if (xd.value.match(/^SU/)) {
               this.removeInterval("ss-btn-ready-listner");
             } else {
-              this.$("#tokenstatus").insertAdjacentHTML("afterend", `<small style="display: block; word-break: break-all;">Should be ready to submit</small>`);
+              this.$("#tokenstatus").insertAdjacentHTML(
+                "afterend",
+                `<small style="display: block; word-break: break-all;">Should be ready to submit</small>`
+              );
             }
           }
         }, 4 * 1000);
