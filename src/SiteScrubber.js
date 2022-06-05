@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    SiteScrubber
-// @version      2.1.6
+// @version      2.1.7
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -46,7 +46,7 @@
 // @include      /^(?:https?:\/\/)?(?:www\.)?centfile\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?short\.katflys\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?fastclick\.to\//
-// @include      /^(?:https?:\/\/)?(?:www\.)?chedrive\.com\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?chedrive\.(com|net)\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?nitro\.download\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?checkurl\.(org|me)\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?intoupload\.net\//
@@ -5020,32 +5020,46 @@ const siteRules = {
     customScript() {},
   },
   chedrive: {
-    host: ["chedrive.com"],
-    customStyle: `html,body,.blockpage,.desc span{background:#121212!important;color:#dfdfdf!important}.blockpage,a:not([href]){color:#121212!important}`,
+    host: ["chedrive.com", "chedrive.net"],
+    customStyle: `html,body,.blockpage,.desc span{background:#121212!important;color:#dfdfdf!important}.blockpage,a:not([href]){color:#121212!important}.download1page #countdown{display:block!important;}`,
     downloadPageCheckBySelector: [
       "form[name='F1']",
       "button#downloadbtn",
       "span#direct_link a",
+      "input.mngez-free-download",
     ],
     downloadPageCheckByRegex: [/File Download Link Generated/gi],
     remove: [
-      "#sidebarphone",
       "header",
-      "footer",
-      "#footer2",
       "#gdpr-cookie-notice",
+      "#footer2",
+      "footer",
       ".menufooter",
-      ".as_ads_guard",
-      "br",
+      "#sidebarphone",
+      "div[id*='ScriptRoot']",
       "[class^=banner]",
-      "#wrapper > div > div > form > div > div.col-xs-12.col-sm-12.col-md-8.col-lg-8",
-      ".adsbox",
+      "br",
+      "ins",
+      ".fileoption > ul:not([class])",
+      "input[name='method_premium']",
+      "#arlinablock",
+      "div[data-psid]",
+      ".as_ads_guard",
       ".sharefile",
-      ".download0page",
-      "#banner_ad", //BlockAdBlock div
-      "#countdown",
+      ".adsbox",
+      "#countdown", // countdown is not checked by server, so it can be skipped
     ],
-    removeByRegex: [],
+    removeByRegex: [
+      {
+        query: "div[class='txt']",
+        regex: /what is chedrive|Why to Use Chedrive|Chedrive File Hosting|cloud computing/gi,
+      },
+      {
+        query: "div.blockpage > form > .row > div[class='col-12']",
+        regex: /Direct Download|adsbygoogle/gi,
+      },
+      { query: "a.btn.btn-success[href]", regex: /Direct Link Download/gi },
+    ],
     hideElements: undefined,
     removeIFrames: false,
     removeDisabledAttr: false,
@@ -5111,6 +5125,32 @@ const siteRules = {
       "c1",
       "mAsZVZBrQfEY",
       "RbntPCrNXp",
+      "hm",
+      "s",
+      "R",
+      "X",
+      "options",
+      "lary",
+      "addEventListener",
+      "Fingerprint2",
+      "bmblocks",
+      "ifrm1",
+      "ifrm2",
+      "ifrm3",
+      "ifrm4",
+      "ifrm5",
+      "changed",
+      "__adFormats",
+      "__formatsGetters",
+      "AdManager",
+      "a3klsam",
+      "createCANativeAd",
+      "__banner-init",
+      "initCalendarBanner",
+      "adblock",
+      "__core-js_shared__",
+      "__bdExecutedScripts",
+      "cb8155264343f390c668fd988b17f55fda319f41b7",
     ],
     addInfoBanner: [
       { targetElement: "#commonId", where: "beforeend" },
@@ -5126,11 +5166,21 @@ const siteRules = {
         "span#direct_link a",
         { customText: "Start Download", replaceWithForm: true },
       ],
+      [
+        "input.mngez-free-download",
+        { customText: "Free Download", replaceWithTag: "button" },
+      ],
     ],
     customScript() {
-      this.waitUntilSelector("div.col-xs-12.col-sm-12.col-md-4.col-lg-4").then(
-        (div) => (div.className = "col-12")
+      this.$("div.col-xs-12.col-sm-12.col-md-4.col-lg-4")?.setAttribute(
+        "class",
+        "col-12"
       );
+      this.$("div.col-xs-12.col-sm-12.col-md-4.col-lg-4")?.setAttribute(
+        "class",
+        "col-12"
+      );
+      [...document.querySelectorAll("div")].filter(div => div.textContent.trim().length == 0).forEach(e => e.remove());
     },
   },
   nitro: {
@@ -6532,7 +6582,12 @@ const siteRules = {
   gplinks: {
     host: ["gplinks.co", "mynewsmedia.co"],
     customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}.countdown-circle-value{display:none!important;}`,
-    downloadPageCheckBySelector: ["a.btn.btn-primary.open-continue-btn-org", "form#yuidea", "form#go-link", "#wpsafe-snp"],
+    downloadPageCheckBySelector: [
+      "a.btn.btn-primary.open-continue-btn-org",
+      "form#yuidea",
+      "form#go-link",
+      "#wpsafe-snp",
+    ],
     downloadPageCheckByRegex: [],
     remove: [
       "nav",

@@ -13,6 +13,10 @@ All major and minor version changes will be documented in this file. Details of 
 
 ## Details
 
+### [2.1.7] - 2022-06-04
+- Update chedrive.com
+    - Add support for new domain under chedrive.net
+
 ### [2.1.6] - 2022-06-04
 - Add gplinks.co support ([Issue #9](https://github.com/PrimePlaya24/dl-site-scrubber/issues/9))
     - Add support for beingupdated.com and mynewsmedia.co which is a sister sites of gplinks.co
