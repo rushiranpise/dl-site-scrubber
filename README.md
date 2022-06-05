@@ -46,9 +46,10 @@ SiteScrubber will:
     - Watches for elements added dynamically as well
 
 
-# List of Supported Sites [Updated 2022-04-26]
+# List of Supported Sites [Updated 2022-06-04]
 - apk.miuiku.com ⭐
 - apkadmin.com ⭐
+- beingupdated.com ⭐
 - centfile.com
 - chedrive.com ⭐
 - clicknupload.cc ⭐
@@ -64,12 +65,14 @@ SiteScrubber will:
 - file4.net
 - filelox.com ⭐
 - filerio.in
+- gplinks.co ⭐
 - hexupload.net ⭐
 - indishare.org ⭐
 - intoupload.net
 - katfile.com
 - mega4up.com
 - mixloads.com
+- mynewsmedia.co ⭐
 - nitro.download
 - tusfiles.com ⭐
 - up-load.io

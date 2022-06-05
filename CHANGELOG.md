@@ -13,13 +13,17 @@ All major and minor version changes will be documented in this file. Details of 
 
 ## Details
 
+### [2.1.5] - 2022-06-04
+- Add gplinks.co support ([Issue #9](https://github.com/PrimePlaya24/dl-site-scrubber/issues/9))
+    - Add support for beingupdated.com and mynewsmedia.co which is a sister sites of gplinks.co
+
 ### [2.1.5] - 2022-06-03
-- Fix drop.download ([Issue #16](https://github.com/PrimePlaya24/dl-site-scrubber/issues/16)
+- Fix drop.download ([Issue #16](https://github.com/PrimePlaya24/dl-site-scrubber/issues/16))
 - Added **build.py** script to update all files for distribution
 
 ### [2.1.4] - 2022-04-26
 - Add support for DropGalaxy.com again
-    - Resolve related issues ([Issue #10](https://github.com/PrimePlaya24/dl-site-scrubber/issues/10) and [Issue #11](https://github.com/PrimePlaya24/dl-site-scrubber/issues/11))
+    - Resolve related issues ([Issue #10](https://github.com/PrimePlaya24/dl-site-scrubber/issues/10)) and [Issue #11](https://github.com/PrimePlaya24/dl-site-scrubber/issues/11))
 - Add interceptPreventDefault() function
 
 ### [2.1.3] - 2022-04-24

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SiteScrubber
 // @namespace    SiteScrubber
-// @version      2.1.5
+// @version      2.1.6
 // @description  Scrub site of ugliness and ease the process of downloading from multiple file hosting sites!
 // @author       PrimePlaya24
 // @license      GPL-3.0-or-later; https://www.gnu.org/licenses/gpl-3.0.txt
@@ -56,6 +56,9 @@
 // @include      /^(?:https?:\/\/)?(?:www\.)?apk\.miuiku\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?uploadydl\.com\//
 // @include      /^(?:https?:\/\/)?(?:www\.)?dropgalaxy\.(com)\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?beingupdated\.(com)\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?gplinks\.(co)\//
+// @include      /^(?:https?:\/\/)?(?:www\.)?mynewsmedia\.(co)\//
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
@@ -964,7 +967,9 @@ class SiteScrubber {
       !this.checkIfDownloadPage(
         this.currSiteRules?.downloadPageCheckBySelector,
         this.currSiteRules?.downloadPageCheckByRegex
-      )
+      ) &&
+      !(this.window.grecaptcha !== void 0) &&
+      !(this.window.hcaptcha !== void 0)
     ) {
       this.log("Did not match as a download page... Stopping.");
       return;
@@ -6467,6 +6472,233 @@ const siteRules = {
 
       //   setTimeout(xdFunc, 5 * 1000);
       // }
+    },
+  },
+  beingupdated: {
+    host: ["beingupdated.com"],
+    customStyle: `html,body,.gmr-content{background:#121212!important;color:#dfdfdf!important}`,
+    downloadPageCheckBySelector: ["#wpsafe-link"],
+    downloadPageCheckByRegex: [],
+    remove: [
+      "header",
+      "#footer-container",
+      "#menus",
+      "#secondmenus",
+      // ".wpsafe-top ~ *",
+      "aside",
+      "article[id^='post']",
+      "ul.page-numbers",
+      "#adb",
+      "#download-ad-modal-addii",
+      "#show-ad",
+      "#comments",
+    ],
+    removeByRegex: [],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [],
+    addInfoBanner: [],
+    createCountdown: "",
+    modifyButtons: [
+      [
+        "#wpsafelinkhuman",
+        {
+          replaceWithTag: "button",
+          requiresCaptcha: true,
+          makeListener: true,
+          props: { type: "submit", style: "", onclick: "" },
+        },
+      ],
+    ],
+    customScript() {
+      const safeLinkURL = window.document.documentElement.outerHTML.match(
+        /window.open\('(https:\/\/beingupdated.com\?safelink[^']+)'/i
+      )?.[1];
+      if (safeLinkURL) {
+        [...document.body.children].forEach((element) => element.remove());
+        document.body.className = "container";
+        document.body.insertAdjacentHTML(
+          "afterbegin",
+          `<a href="${safeLinkURL}" class="ss-animated-button ss-btn-ready ss-w-100">Continue to Next Step<span></span><span></span><span></span><span></span></button>`
+        );
+        this.addHoverAbility(
+          document.querySelector(".ss-animated-button"),
+          false
+        );
+      }
+    },
+  },
+  gplinks: {
+    host: ["gplinks.co", "mynewsmedia.co"],
+    customStyle: `html,body{background:#121212!important;color:#dfdfdf!important}.countdown-circle-value{display:none!important;}`,
+    downloadPageCheckBySelector: ["a.btn.btn-primary.open-continue-btn-org", "form#yuidea", "form#go-link", "#wpsafe-snp"],
+    downloadPageCheckByRegex: [],
+    remove: [
+      "nav",
+      "footer",
+      "#ad-modal",
+      ".ad-banner",
+      "[id*='vliadb']",
+      ".smart-link-banner-ad-container",
+      "ins",
+      "[id^='div-gpt-ad']",
+      "#AdBlocker",
+      ".modal-backdrop",
+      "#download-ad-modal",
+      "#show-ad",
+      "#ad-link-location",
+      ".myTestAd",
+    ],
+    removeByRegex: [
+      { query: "style", regex: /\.container-circle-value|#__vliadb83/gi },
+    ],
+    hideElements: undefined,
+    removeIFrames: false,
+    removeDisabledAttr: false,
+    destroyWindowFunctions: [
+      "app_vars",
+      "blurred",
+      "e",
+      "__CF$cv$params",
+      "__rocketLoaderEventCtor",
+      "__rocketLoaderLoadProgressSimulator",
+      "__cfQR",
+      "dataLayer",
+      "googletag",
+      "UnlockButton",
+      "$original_link",
+      "isIPPAdClick",
+      "linkTimer",
+      "handleAllowPermission",
+      "isSafari",
+      "handlePermission",
+      "permissionQuery",
+      "wow",
+      "fixHeight",
+      "captchaShort",
+      "captchaContact",
+      "captchaSignin",
+      "captchaSignup",
+      "captchaForgotpassword",
+      "captchaShortlink",
+      "invisibleCaptchaShort",
+      "invisibleCaptchaContact",
+      "invisibleCaptchaSignin",
+      "invisibleCaptchaSignup",
+      "invisibleCaptchaForgotpassword",
+      "invisibleCaptchaShortlink",
+      "onloadRecaptchaCallback",
+      "setCookie",
+      "getCookie",
+      "go_popup",
+      "checkAdblockUser",
+      "checkAdsbypasserUser",
+      "checkPrivateMode",
+      "body",
+      "ad_type",
+      "counter_start_object",
+      "selectedTab",
+      "clipboard",
+      "setTooltip",
+      "cookie_accept",
+      "WOW",
+      "ClipboardJS",
+      "adblockDetector",
+      "__cfRLUnblockHandlers",
+      "ga",
+    ],
+    addInfoBanner: [],
+    createCountdown: { element: ".box-main", timer: 10 },
+    modifyButtons: [
+      ["#go-submit", { requiresTimer: true, props: { id: "", style: "" } }],
+      [
+        "#btn6",
+        {
+          replaceWithTag: "a",
+          props: {
+            id: "",
+            style: "",
+          },
+        },
+      ],
+      ["#link-btn > a", { props: { id: "", style: "" } }],
+      [
+        "button.btn.btn-primary.file-download-btn",
+        { replaceWithTag: "a", makeListener: true },
+      ],
+      [
+        "body > form[id='yuidea'] input.btn.btn-primary",
+        { replaceWithTag: "button", makeListener: true },
+      ],
+      ["a.btn.btn-primary.open-continue-btn-org", { props: { style: "" } }],
+    ],
+    customScript() {
+      // aesthetics
+      this.$("#wpsafe-snp")?.removeAttribute("style");
+
+      // submit hidden forms
+      document.body.removeAttribute("style");
+      document.querySelector("body > form[id='yuidea']")?.submit();
+
+      // block page from adding listeners
+      this.interceptAddEventListeners(() => false);
+
+      // check if redirectLink is in page
+      const redirectLink = window.document.documentElement.outerHTML.match(
+        /redirectLink = '([^']+)'/
+      )?.[1];
+      if (redirectLink) {
+        document
+          .querySelector(".ss-animated-button")
+          ?.setAttribute("href", redirectLink);
+        window.location = redirectLink;
+      }
+
+      // check if on the the last page with the form
+      const form = this.$("form#go-link");
+      if (form) {
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        const _this = this;
+        setTimeout(() => {
+          fetch("https://gplinks.co/links/go", {
+            headers: {
+              accept: "application/json, text/javascript, */*; q=0.01",
+              "accept-language": "en-US,en;q=0.9",
+              "content-type":
+                "application/x-www-form-urlencoded; charset=UTF-8",
+              "sec-fetch-dest": "empty",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-site": "same-origin",
+              "sec-gpc": "1",
+              "x-requested-with": "XMLHttpRequest",
+            },
+            referrerPolicy: "strict-origin-when-cross-origin",
+            body: params.toString(),
+            method: "POST",
+            mode: "cors",
+            credentials: "include",
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              console.log(data);
+              const link = data.url;
+              [...document.body.children].forEach((element) =>
+                element.remove()
+              );
+              document.body.className = "container";
+              document.body.insertAdjacentHTML(
+                "afterbegin",
+                `<a href="${link}" class="ss-animated-button ss-btn-ready ss-w-100">${link}<span></span><span></span><span></span><span></span></button>`
+              );
+              _this.addHoverAbility(
+                document.querySelector(".ss-animated-button"),
+                false
+              );
+            });
+        }, 10 * 1000); // must wait 10 seconds
+      }
     },
   },
   NEWSITE: {
