@@ -6328,7 +6328,7 @@ const siteRules = {
       "pgDevice",
     ],
     addInfoBanner: [{ targetElement: ".downloadPage", where: "beforeend" }],
-    createCountdown: { element: ".seconds", timer: 6 },
+    createCountdown: { element: ".seconds", timer: 16 },
     modifyButtons: [
       ["button#method_free", { makeListener: false, props: { style: "" } }],
       [
